@@ -64,8 +64,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
   };
 
   // Load all data
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const [usersData, testsData, subsData, accessData] = await Promise.all([
         usersService.getUsers(),
@@ -91,12 +91,30 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
     } catch (err) {
       console.error('Failed to load user management data:', err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [selectedUserId, selectedTestId]);
 
   useEffect(() => {
-    loadData();
+    loadData(true);
+
+    const unsubscribe = testsService.subscribeToTests(() => {
+      loadData(false);
+    });
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadData(false);
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
   }, [loadData]);
 
   // ONLY STUDENTS: All admins are off the list!

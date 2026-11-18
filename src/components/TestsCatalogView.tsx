@@ -43,8 +43,8 @@ export const TestsCatalogView: React.FC<TestsCatalogViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'locked'>('all');
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const promises: [Promise<TestPaper[]>, Promise<Submission[]>, Promise<Record<string, boolean>>] = [
         testsService.getTests(isAdmin),
@@ -61,12 +61,30 @@ export const TestsCatalogView: React.FC<TestsCatalogViewProps> = ({
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [isAdmin, user]);
 
   useEffect(() => {
-    loadData();
+    loadData(true);
+
+    const unsubscribe = testsService.subscribeToTests(() => {
+      loadData(false);
+    });
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadData(false);
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
   }, [loadData]);
 
   // Group submissions by test_id (sorted newest to oldest by submitted_at)

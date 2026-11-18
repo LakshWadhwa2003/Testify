@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { AuthModal } from './components/AuthModal';
 import { Navbar } from './components/Navbar';
@@ -32,6 +32,18 @@ export function AppContent() {
   // Active Test Editing & Creation Pages
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
   const [isCreatingTest, setIsCreatingTest] = useState(false);
+
+  // Real-time synchronization for active previewed test
+  useEffect(() => {
+    const unsubscribe = testsService.subscribeToTests((event) => {
+      if (activeTest && event.testId && activeTest.test.id === event.testId && !takingTestId) {
+        testsService.getTestById(event.testId).then((data) => {
+          if (data) setActiveTest(data);
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [activeTest, takingTestId]);
 
   // Handle Tab changes
   const handleTabChange = (tab: TabType) => {

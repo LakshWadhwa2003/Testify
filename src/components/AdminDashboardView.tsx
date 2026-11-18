@@ -70,8 +70,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
   const [loading, setLoading] = useState(true);
 
   // Load admin data
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const [testsData, subsData, usersData, accessData] = await Promise.all([
         testsService.getTests(true),
@@ -86,12 +86,30 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
+    loadData(true);
+
+    const unsubscribe = testsService.subscribeToTests(() => {
+      loadData(false);
+    });
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadData(false);
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
   }, [loadData]);
 
   // Derived statistics

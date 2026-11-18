@@ -24,6 +24,7 @@ const STORAGE_KEYS = {
   SUBMISSION_ANSWERS: 'muskaan_submission_answers_v2',
   PROFILES: 'muskaan_profiles_v2',
   USER_TEST_ACCESS: 'muskaan_user_test_access_v1',
+  DELETED_TEST_IDS: 'muskaan_deleted_test_ids_v1',
 };
 
 // UUID validation helper
@@ -333,10 +334,216 @@ export const authService = {
 };
 
 // ----------------------------------------------------------------------
+// REAL-TIME TESTS SYNC ENGINE
+// ----------------------------------------------------------------------
+export interface TestChangeEvent {
+  action: 'create' | 'update' | 'delete' | 'toggle_publish' | 'access_update';
+  testId?: string;
+  test?: TestPaper;
+  questions?: Question[];
+  is_published?: boolean;
+  timestamp: number;
+}
+
+export type TestChangeCallback = (event: TestChangeEvent) => void;
+
+const testSubscribers = new Set<TestChangeCallback>();
+
+// Cross-tab broadcast channel for instantaneous zero-latency updates
+let testBroadcastChannel: BroadcastChannel | null = null;
+if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
+  try {
+    testBroadcastChannel = new BroadcastChannel('testify_test_realtime');
+    testBroadcastChannel.onmessage = (event) => {
+      if (event.data && typeof event.data === 'object') {
+        notifyLocalSubscribers(event.data as TestChangeEvent);
+      }
+    };
+  } catch (err) {
+    console.warn('BroadcastChannel not initialized:', err);
+  }
+}
+
+// Fallback cross-tab listener using storage events
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'testify_test_sync_event' && e.newValue) {
+      try {
+        const parsed = JSON.parse(e.newValue);
+        notifyLocalSubscribers(parsed);
+      } catch {}
+    }
+  });
+}
+
+function applyIncomingEventToStorage(event: TestChangeEvent) {
+  try {
+    if (event.action === 'delete' && event.testId) {
+      const deletedIds = getStored<string[]>(STORAGE_KEYS.DELETED_TEST_IDS, []);
+      if (!deletedIds.includes(event.testId)) {
+        deletedIds.push(event.testId);
+        setStored(STORAGE_KEYS.DELETED_TEST_IDS, deletedIds);
+      }
+      const tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS).filter((t) => t.id !== event.testId);
+      setStored(STORAGE_KEYS.TESTS, tests);
+      const questions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS).filter((q) => q.test_id !== event.testId);
+      setStored(STORAGE_KEYS.QUESTIONS, questions);
+    } else if ((event.action === 'update' || event.action === 'create') && event.test) {
+      const deletedIds = getStored<string[]>(STORAGE_KEYS.DELETED_TEST_IDS, []);
+      if (deletedIds.includes(event.test.id)) {
+        setStored(STORAGE_KEYS.DELETED_TEST_IDS, deletedIds.filter((id) => id !== event.test!.id));
+      }
+
+      const tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
+      const idx = tests.findIndex((t) => t.id === event.test!.id);
+      if (idx >= 0) {
+        tests[idx] = event.test;
+      } else {
+        tests.unshift(event.test);
+      }
+      setStored(STORAGE_KEYS.TESTS, tests);
+
+      if (event.questions && event.questions.length > 0) {
+        const questions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
+        const remaining = questions.filter((q) => q.test_id !== event.test!.id);
+        setStored(STORAGE_KEYS.QUESTIONS, [...remaining, ...event.questions]);
+      }
+    } else if (event.action === 'toggle_publish' && event.testId && typeof event.is_published === 'boolean') {
+      const tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
+      const test = tests.find((t) => t.id === event.testId);
+      if (test) {
+        test.is_published = event.is_published;
+        setStored(STORAGE_KEYS.TESTS, tests);
+      }
+    }
+  } catch (err) {
+    console.error('Error applying incoming test event to local storage:', err);
+  }
+}
+
+function notifyLocalSubscribers(event: TestChangeEvent) {
+  applyIncomingEventToStorage(event);
+  for (const cb of testSubscribers) {
+    try {
+      cb(event);
+    } catch (err) {
+      console.error('Error in test change subscriber callback:', err);
+    }
+  }
+}
+
+let supabaseTestChannel: any = null;
+let isChannelConnecting = false;
+
+function initSupabaseRealtime() {
+  if (!isSupabaseConfigured || !supabase || supabaseTestChannel || isChannelConnecting) return;
+  isChannelConnecting = true;
+
+  try {
+    supabaseTestChannel = supabase
+      .channel('public:test_papers_realtime', {
+        config: { broadcast: { self: false } },
+      })
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tests' },
+        (payload: any) => {
+          const action = payload.eventType === 'INSERT'
+            ? 'create'
+            : payload.eventType === 'DELETE'
+            ? 'delete'
+            : 'update';
+          const test = payload.new as TestPaper | undefined;
+          const testId = payload.new?.id || payload.old?.id;
+          notifyLocalSubscribers({ action, testId, test, timestamp: Date.now() });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'questions' },
+        (payload: any) => {
+          const testId = payload.new?.test_id || payload.old?.test_id;
+          notifyLocalSubscribers({ action: 'update', testId, timestamp: Date.now() });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_test_access' },
+        (payload: any) => {
+          const testId = payload.new?.test_id || payload.old?.test_id;
+          notifyLocalSubscribers({ action: 'access_update', testId, timestamp: Date.now() });
+        }
+      )
+      .on('broadcast', { event: 'test_papers_changed' }, (payload: any) => {
+        if (payload?.payload) {
+          notifyLocalSubscribers(payload.payload as TestChangeEvent);
+        }
+      })
+      .subscribe((status: string, err: any) => {
+        isChannelConnecting = false;
+        if (err) {
+          console.warn('Supabase realtime channel warning:', status, err);
+        }
+      });
+  } catch (err) {
+    isChannelConnecting = false;
+    console.warn('Failed to subscribe to Supabase realtime channel:', err);
+  }
+}
+
+export function broadcastTestChange(event: TestChangeEvent) {
+  // 1. Notify local subscribers and persist immediately
+  notifyLocalSubscribers(event);
+
+  // 2. Broadcast across tabs in the same browser (sub-millisecond)
+  if (testBroadcastChannel) {
+    try {
+      testBroadcastChannel.postMessage(event);
+    } catch {}
+  }
+
+  // 3. Fallback to storage event for other tabs
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('testify_test_sync_event', JSON.stringify(event));
+    } catch {}
+  }
+
+  // 4. Broadcast over Supabase WebSocket to other devices/browsers
+  if (isSupabaseConfigured && supabase) {
+    initSupabaseRealtime();
+    if (supabaseTestChannel) {
+      supabaseTestChannel.send({
+        type: 'broadcast',
+        event: 'test_papers_changed',
+        payload: event,
+      }).catch((e: any) => {
+        console.warn('Supabase broadcast send warning:', e);
+      });
+    }
+  }
+}
+
+// ----------------------------------------------------------------------
 // TESTS SERVICE
 // ----------------------------------------------------------------------
 export const testsService = {
+  subscribeToTests(callback: TestChangeCallback): () => void {
+    initSupabaseRealtime();
+    testSubscribers.add(callback);
+    return () => {
+      testSubscribers.delete(callback);
+    };
+  },
+
   async getTests(isAdmin = false): Promise<TestPaper[]> {
+    seedInitialDataIfNeeded();
+    const localTests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
+    const localQuestions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
+    const deletedIds = new Set(getStored<string[]>(STORAGE_KEYS.DELETED_TEST_IDS, []));
+
+    let baseTests: TestPaper[] = [];
+
     if (isSupabaseConfigured && supabase) {
       try {
         let query = supabase
@@ -344,38 +551,82 @@ export const testsService = {
           .select('*, questions(count)')
           .order('created_at', { ascending: false });
 
-        if (!isAdmin) {
-          query = query.eq('is_published', true);
-        }
-
         const { data, error } = await query;
-        if (error) throw error;
-
-        return (data || []).map((row: any) => ({
-          ...row,
-          question_count: row.questions?.[0]?.count ?? 0,
-        })) as TestPaper[];
+        if (!error && data) {
+          baseTests = (data || []).map((row: any) => ({
+            ...row,
+            question_count: row.questions?.[0]?.count ?? 0,
+          })) as TestPaper[];
+        }
       } catch (err) {
-        console.warn('Supabase getTests error, falling back to local storage:', err);
+        console.warn('Supabase getTests error, using local tests:', err);
       }
     }
 
-    seedInitialDataIfNeeded();
-    const tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
-    const questions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
-
-    const testsWithCount = tests.map(t => ({
-      ...t,
-      question_count: questions.filter(q => q.test_id === t.id).length
-    }));
-
-    if (!isAdmin) {
-      return testsWithCount.filter((t) => t.is_published);
+    // Build map of local test papers (holds any local edits, new papers, updated question counts)
+    const localMap = new Map<string, TestPaper>();
+    for (const t of localTests) {
+      const qCount = localQuestions.filter((q) => q.test_id === t.id).length;
+      localMap.set(t.id, {
+        ...t,
+        question_count: qCount > 0 ? qCount : (t.question_count || 0),
+      });
     }
-    return testsWithCount;
+
+    // Merge base tests with local modifications
+    const mergedMap = new Map<string, TestPaper>();
+    if (baseTests.length > 0) {
+      for (const t of baseTests) {
+        if (deletedIds.has(t.id)) continue;
+        const override = localMap.get(t.id);
+        if (override) {
+          mergedMap.set(t.id, override);
+        } else {
+          mergedMap.set(t.id, t);
+        }
+      }
+      for (const [id, t] of localMap.entries()) {
+        if (!deletedIds.has(id) && !mergedMap.has(id)) {
+          mergedMap.set(id, t);
+        }
+      }
+    } else {
+      for (const [id, t] of localMap.entries()) {
+        if (!deletedIds.has(id)) {
+          mergedMap.set(id, t);
+        }
+      }
+    }
+
+    let results = Array.from(mergedMap.values());
+    if (!isAdmin) {
+      results = results.filter((t) => t.is_published);
+    }
+    return results;
   },
 
   async getTestById(id: string): Promise<{ test: TestPaper; questions: Question[] } | null> {
+    seedInitialDataIfNeeded();
+    const deletedIds = new Set(getStored<string[]>(STORAGE_KEYS.DELETED_TEST_IDS, []));
+    if (deletedIds.has(id)) return null;
+
+    const localTests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
+    const localQuestions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
+
+    const testLocal = localTests.find((t) => t.id === id);
+    const testQuestionsLocal = localQuestions
+      .filter((q) => q.test_id === id)
+      .sort((a, b) => a.order_index - b.order_index);
+
+    // If local test has modified questions, return them!
+    if (testLocal && testQuestionsLocal.length > 0) {
+      return {
+        test: { ...testLocal, question_count: testQuestionsLocal.length },
+        questions: testQuestionsLocal,
+      };
+    }
+
+    // Otherwise fetch from Supabase
     if (isSupabaseConfigured && supabase) {
       try {
         const { data: test, error: testErr } = await supabase
@@ -393,7 +644,7 @@ export const testsService = {
 
           if (!qErr) {
             return {
-              test: { ...(test as TestPaper), question_count: (questions || []).length },
+              test: testLocal ? { ...testLocal, question_count: (questions || []).length } : { ...(test as TestPaper), question_count: (questions || []).length },
               questions: (questions || []) as Question[],
             };
           }
@@ -403,20 +654,14 @@ export const testsService = {
       }
     }
 
-    seedInitialDataIfNeeded();
-    const tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
-    const test = tests.find((t) => t.id === id);
-    if (!test) return null;
+    if (testLocal) {
+      return {
+        test: { ...testLocal, question_count: testQuestionsLocal.length },
+        questions: testQuestionsLocal,
+      };
+    }
 
-    const questions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
-    const testQuestions = questions
-      .filter((q) => q.test_id === id)
-      .sort((a, b) => a.order_index - b.order_index);
-
-    return {
-      test: { ...test, question_count: testQuestions.length },
-      questions: testQuestions,
-    };
+    return null;
   },
 
   async createTest(
@@ -438,11 +683,44 @@ export const testsService = {
   ): Promise<TestPaper> {
     const totalPoints = questionsData.reduce((sum, q) => sum + (Number(q.points) || 1), 0);
 
+    // 1. Initialize local persistent record
+    seedInitialDataIfNeeded();
+    const currentProfile = getStored<Profile | null>(STORAGE_KEYS.CURRENT_USER, null);
+    const tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
+    const questions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
+
+    const testId = 'test-' + Date.now();
+    let newTest: TestPaper = {
+      id: testId,
+      title: testData.title,
+      description: testData.description || null,
+      duration_minutes: Number(testData.duration_minutes) || 30,
+      total_points: totalPoints,
+      is_published: testData.is_published ?? true,
+      category: testData.category || 'General',
+      created_by: currentProfile?.id || 'admin',
+      created_at: new Date().toISOString(),
+      question_count: questionsData.length,
+    };
+
+    let newQuestions: Question[] = questionsData.map((q, idx) => ({
+      id: 'q-' + Date.now() + '-' + idx,
+      test_id: testId,
+      question_text: q.question_text,
+      question_type: q.question_type,
+      options: q.options || [],
+      correct_answer: q.correct_answer,
+      explanation: q.explanation || null,
+      points: Number(q.points) || 1,
+      order_index: idx,
+    }));
+
+    // 2. Try remote Supabase creation if configured
     if (isSupabaseConfigured && supabase) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
 
-        const { data: newTest, error: testError } = await supabase
+        const { data: remoteTest, error: testError } = await supabase
           .from('tests')
           .insert({
             title: testData.title,
@@ -456,70 +734,50 @@ export const testsService = {
           .select()
           .single();
 
-        if (testError) throw testError;
+        if (!testError && remoteTest) {
+          newTest = {
+            ...(remoteTest as TestPaper),
+            question_count: questionsData.length,
+          };
 
-        if (questionsData.length > 0 && newTest) {
-          const rows = questionsData.map((q, idx) => ({
-            test_id: newTest.id,
-            question_text: q.question_text,
-            question_type: q.question_type,
-            options: q.options || [],
-            correct_answer: q.correct_answer,
-            explanation: q.explanation || null,
-            points: Number(q.points) || 1,
-            order_index: idx,
-          }));
+          if (questionsData.length > 0) {
+            const rows = questionsData.map((q, idx) => ({
+              test_id: remoteTest.id,
+              question_text: q.question_text,
+              question_type: q.question_type,
+              options: q.options || [],
+              correct_answer: q.correct_answer,
+              explanation: q.explanation || null,
+              points: Number(q.points) || 1,
+              order_index: idx,
+            }));
 
-          const { error: qError } = await supabase.from('questions').insert(rows);
-          if (qError) throw qError;
+            const { data: remoteQuestions, error: qError } = await supabase.from('questions').insert(rows).select();
+            if (!qError && remoteQuestions) {
+              newQuestions = remoteQuestions as Question[];
+            }
+          }
         }
-
-        return {
-          ...(newTest as TestPaper),
-          question_count: questionsData.length,
-        };
       } catch (err) {
         console.warn('Supabase test creation error (RLS or unauthenticated), storing locally:', err);
       }
     }
 
-    // Local Storage Persistence Fallback
-    seedInitialDataIfNeeded();
-    const currentProfile = getStored<Profile | null>(STORAGE_KEYS.CURRENT_USER, null);
-    const tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
-    const questions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
-
-    const testId = 'test-' + Date.now();
-    const newTest: TestPaper = {
-      id: testId,
-      title: testData.title,
-      description: testData.description || null,
-      duration_minutes: Number(testData.duration_minutes) || 30,
-      total_points: totalPoints,
-      is_published: testData.is_published ?? true,
-      category: testData.category || 'General',
-      created_by: currentProfile?.id || 'admin',
-      created_at: new Date().toISOString(),
-      question_count: questionsData.length,
-    };
-
-    const newQuestions: Question[] = questionsData.map((q, idx) => ({
-      id: 'q-' + Date.now() + '-' + idx,
-      test_id: testId,
-      question_text: q.question_text,
-      question_type: q.question_type,
-      options: q.options || [],
-      correct_answer: q.correct_answer,
-      explanation: q.explanation || null,
-      points: Number(q.points) || 1,
-      order_index: idx,
-    }));
-
+    // 3. Save into local persistent store
     tests.unshift(newTest);
     questions.push(...newQuestions);
 
     setStored(STORAGE_KEYS.TESTS, tests);
     setStored(STORAGE_KEYS.QUESTIONS, questions);
+
+    // 4. Broadcast real-time change to all tabs and devices
+    broadcastTestChange({
+      action: 'create',
+      testId: newTest.id,
+      test: newTest,
+      questions: newQuestions,
+      timestamp: Date.now(),
+    });
 
     return newTest;
   },
@@ -545,98 +803,31 @@ export const testsService = {
   ): Promise<TestPaper> {
     const totalPoints = questionsData.reduce((sum, q) => sum + (Number(q.points) || 1), 0);
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data: updatedTest, error: testError } = await supabase
-          .from('tests')
-          .update({
-            title: testData.title,
-            description: testData.description ?? null,
-            duration_minutes: Number(testData.duration_minutes) || 30,
-            category: testData.category || 'General',
-            is_published: testData.is_published ?? true,
-            total_points: totalPoints,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', testId)
-          .select()
-          .single();
-
-        if (testError) throw testError;
-
-        const { data: existingQuestions, error: fetchErr } = await supabase
-          .from('questions')
-          .select('id')
-          .eq('test_id', testId);
-
-        if (!fetchErr) {
-          const existingIds = new Set((existingQuestions || []).map((q: any) => q.id));
-          const incomingIds = new Set(questionsData.map((q) => q.id).filter(Boolean));
-
-          const idsToDelete = [...existingIds].filter((id) => !incomingIds.has(id));
-          if (idsToDelete.length > 0) {
-            await supabase.from('questions').delete().in('id', idsToDelete);
-          }
-
-          for (let idx = 0; idx < questionsData.length; idx++) {
-            const q = questionsData[idx];
-            if (q.id && existingIds.has(q.id)) {
-              await supabase
-                .from('questions')
-                .update({
-                  question_text: q.question_text,
-                  question_type: q.question_type,
-                  options: q.options || [],
-                  correct_answer: q.correct_answer,
-                  explanation: q.explanation ?? null,
-                  points: Number(q.points) || 1,
-                  order_index: idx,
-                })
-                .eq('id', q.id);
-            } else {
-              await supabase
-                .from('questions')
-                .insert({
-                  test_id: testId,
-                  question_text: q.question_text,
-                  question_type: q.question_type,
-                  options: q.options || [],
-                  correct_answer: q.correct_answer,
-                  explanation: q.explanation ?? null,
-                  points: Number(q.points) || 1,
-                  order_index: idx,
-                });
-            }
-          }
-        }
-
-        return {
-          ...(updatedTest as TestPaper),
-          question_count: questionsData.length,
-        };
-      } catch (err) {
-        console.warn('Supabase test update error, updating local storage:', err);
-      }
-    }
-
-    // Local Storage Persistence Fallback
+    // 1. Build and persist locally first so update is NEVER lost
     seedInitialDataIfNeeded();
     const tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
     const testIndex = tests.findIndex((t) => t.id === testId);
-    if (testIndex === -1) throw new Error('Test not found');
 
     const updatedTest: TestPaper = {
-      ...tests[testIndex],
+      ...(testIndex >= 0 ? tests[testIndex] : {}),
+      id: testId,
       title: testData.title,
       description: testData.description ?? null,
       duration_minutes: Number(testData.duration_minutes) || 30,
       total_points: totalPoints,
-      is_published: testData.is_published ?? tests[testIndex].is_published,
+      is_published: testData.is_published ?? (testIndex >= 0 ? tests[testIndex].is_published : true),
       category: testData.category || 'General',
+      created_by: (testIndex >= 0 ? tests[testIndex].created_by : null) || 'admin',
+      created_at: (testIndex >= 0 ? tests[testIndex].created_at : null) || new Date().toISOString(),
       updated_at: new Date().toISOString(),
       question_count: questionsData.length,
     };
-    tests[testIndex] = updatedTest;
+
+    if (testIndex >= 0) {
+      tests[testIndex] = updatedTest;
+    } else {
+      tests.unshift(updatedTest);
+    }
 
     const questions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
     const remainingQuestions = questions.filter((q) => q.test_id !== testId);
@@ -646,7 +837,7 @@ export const testsService = {
     const newQuestionsList: Question[] = questionsData.map((q, idx) => {
       const existing = q.id ? existingMap.get(q.id) : undefined;
       return {
-        id: existing ? existing.id : 'q-' + Date.now() + '-' + idx,
+        id: existing ? existing.id : (q.id || 'q-' + Date.now() + '-' + idx),
         test_id: testId,
         question_text: q.question_text,
         question_type: q.question_type,
@@ -661,6 +852,85 @@ export const testsService = {
 
     setStored(STORAGE_KEYS.TESTS, tests);
     setStored(STORAGE_KEYS.QUESTIONS, [...remainingQuestions, ...newQuestionsList]);
+
+    // 2. Also try remote Supabase update
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: remoteTest, error: testError } = await supabase
+          .from('tests')
+          .update({
+            title: testData.title,
+            description: testData.description ?? null,
+            duration_minutes: Number(testData.duration_minutes) || 30,
+            category: testData.category || 'General',
+            is_published: testData.is_published ?? true,
+            total_points: totalPoints,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', testId)
+          .select()
+          .single();
+
+        if (!testError && remoteTest) {
+          const { data: existingQuestions, error: fetchErr } = await supabase
+            .from('questions')
+            .select('id')
+            .eq('test_id', testId);
+
+          if (!fetchErr) {
+            const existingIds = new Set((existingQuestions || []).map((q: any) => q.id));
+            const incomingIds = new Set(questionsData.map((q) => q.id).filter(Boolean));
+
+            const idsToDelete = [...existingIds].filter((id) => !incomingIds.has(id));
+            if (idsToDelete.length > 0) {
+              await supabase.from('questions').delete().in('id', idsToDelete);
+            }
+
+            for (let idx = 0; idx < questionsData.length; idx++) {
+              const q = questionsData[idx];
+              if (q.id && existingIds.has(q.id)) {
+                await supabase
+                  .from('questions')
+                  .update({
+                    question_text: q.question_text,
+                    question_type: q.question_type,
+                    options: q.options || [],
+                    correct_answer: q.correct_answer,
+                    explanation: q.explanation ?? null,
+                    points: Number(q.points) || 1,
+                    order_index: idx,
+                  })
+                  .eq('id', q.id);
+              } else {
+                await supabase
+                  .from('questions')
+                  .insert({
+                    test_id: testId,
+                    question_text: q.question_text,
+                    question_type: q.question_type,
+                    options: q.options || [],
+                    correct_answer: q.correct_answer,
+                    explanation: q.explanation ?? null,
+                    points: Number(q.points) || 1,
+                    order_index: idx,
+                  });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase test update error, local storage updated:', err);
+      }
+    }
+
+    // 3. Broadcast real-time change to all subscribers
+    broadcastTestChange({
+      action: 'update',
+      testId,
+      test: updatedTest,
+      questions: newQuestionsList,
+      timestamp: Date.now(),
+    });
 
     return updatedTest;
   },
@@ -682,6 +952,12 @@ export const testsService = {
       test.is_published = isPublished;
       setStored(STORAGE_KEYS.TESTS, tests);
     }
+    broadcastTestChange({
+      action: 'toggle_publish',
+      testId,
+      is_published: isPublished,
+      timestamp: Date.now(),
+    });
   },
 
   async deleteTest(testId: string): Promise<void> {
@@ -692,6 +968,12 @@ export const testsService = {
         console.warn('Supabase deleteTest error:', err);
       }
     }
+    const deletedIds = getStored<string[]>(STORAGE_KEYS.DELETED_TEST_IDS, []);
+    if (!deletedIds.includes(testId)) {
+      deletedIds.push(testId);
+      setStored(STORAGE_KEYS.DELETED_TEST_IDS, deletedIds);
+    }
+
     let tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
     tests = tests.filter(t => t.id !== testId);
     setStored(STORAGE_KEYS.TESTS, tests);
@@ -699,6 +981,8 @@ export const testsService = {
     let questions = getStored<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
     questions = questions.filter(q => q.test_id !== testId);
     setStored(STORAGE_KEYS.QUESTIONS, questions);
+
+    broadcastTestChange({ action: 'delete', testId, timestamp: Date.now() });
   }
 };
 
@@ -1350,6 +1634,7 @@ export const userTestAccessService = {
       });
     }
     setStored(STORAGE_KEYS.USER_TEST_ACCESS, records);
+    broadcastTestChange({ action: 'access_update', testId, timestamp: Date.now() });
   },
 
   async setBulkUserTestAccess(userId: string, testIds: string[], isActive: boolean): Promise<void> {
