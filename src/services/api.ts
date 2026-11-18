@@ -88,7 +88,7 @@ export const authService = {
             .from('profiles')
             .select('*')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
           if (profile) return profile as Profile;
 
@@ -101,12 +101,18 @@ export const authService = {
 
           // Try to self-heal the profile row in Supabase
           try {
-            await supabase.from('profiles').upsert({
-              id: fallbackProfile.id,
-              email: fallbackProfile.email,
-              role: fallbackProfile.role,
-              full_name: fallbackProfile.full_name,
-            });
+            const { data: createdProfile } = await supabase
+              .from('profiles')
+              .upsert({
+                id: fallbackProfile.id,
+                email: fallbackProfile.email,
+                role: fallbackProfile.role,
+                full_name: fallbackProfile.full_name,
+              })
+              .select()
+              .maybeSingle();
+
+            if (createdProfile) return createdProfile as Profile;
           } catch {
             // Ignore if RLS blocks
           }
@@ -129,14 +135,31 @@ export const authService = {
 
   async login(email: string, password: string, mockRoleOverride?: UserRole): Promise<{ profile: Profile; error?: string }> {
     const normalizedEmail = email.trim().toLowerCase();
+    const demoEmails = ['teacher@muskaan.edu', 'admin@muskaan.edu', 'student@muskaan.edu', 'priya@muskaan.edu', 'rohit@muskaan.edu'];
+    const isDemoAccount = demoEmails.includes(normalizedEmail);
 
     if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
 
       if (error) {
+        // If it's a known demo email and remote credentials failed, log in with local demo account seamlessly
+        if (isDemoAccount) {
+          seedInitialDataIfNeeded();
+          const profiles = getStored<Profile[]>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
+          const demoUser = profiles.find((p) => p.email.toLowerCase() === normalizedEmail) || {
+            id: 'admin-001',
+            email: normalizedEmail,
+            role: normalizedEmail.includes('teacher') || normalizedEmail.includes('admin') ? 'admin' : 'student',
+            full_name: normalizedEmail.includes('teacher') || normalizedEmail.includes('admin') ? 'Dr. Muskaan Sharma (Teacher)' : 'Student User',
+            created_at: new Date().toISOString(),
+          } as Profile;
+          setStored(STORAGE_KEYS.CURRENT_USER, demoUser);
+          return { profile: demoUser };
+        }
+
         // Friendly messaging for unconfirmed emails
         if (error.message?.toLowerCase().includes('email not confirmed')) {
           return {
@@ -145,11 +168,29 @@ export const authService = {
           };
         }
 
+        if (error.message?.toLowerCase().includes('invalid login credentials')) {
+          return {
+            profile: null as any,
+            error: 'Invalid email or password. Please verify your credentials or click "Create Account" if you have not registered yet.'
+          };
+        }
+
+        if (error.message?.toLowerCase().includes('invalid api key') || error.message?.toLowerCase().includes('api key')) {
+          return {
+            profile: null as any,
+            error: 'Invalid Supabase API Key. Please verify VITE_SUPABASE_ANON_KEY in your .env file or use the Demo accounts below.'
+          };
+        }
+
         return { profile: null as any, error: error.message };
       }
 
+      if (!data.user) {
+        return { profile: null as any, error: 'User account not found' };
+      }
+
       const profile = await this.getCurrentProfile();
-      if (!profile) return { profile: null as any, error: 'User profile not found' };
+      if (!profile) return { profile: null as any, error: 'User profile could not be loaded' };
       setStored(STORAGE_KEYS.CURRENT_USER, profile);
       return { profile };
     } else {
@@ -162,7 +203,7 @@ export const authService = {
         const newProfile: Profile = {
           id: 'user-' + Math.random().toString(36).substring(2, 9),
           email: normalizedEmail,
-          role: mockRoleOverride || 'student',
+          role: mockRoleOverride || (normalizedEmail.includes('admin') || normalizedEmail.includes('teacher') ? 'admin' : 'student'),
           full_name: normalizedEmail.split('@')[0],
           created_at: new Date().toISOString(),
         };
@@ -191,7 +232,7 @@ export const authService = {
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName.trim(),
             role,
           },
         },
@@ -204,7 +245,21 @@ export const authService = {
             error: 'Supabase email rate limit exceeded (3/hr on free tier). Disable "Confirm email" in Supabase Dashboard (Authentication -> Providers -> Email) for instant signups without emails.',
           };
         }
+        if (error.message?.toLowerCase().includes('invalid api key') || error.message?.toLowerCase().includes('api key')) {
+          return {
+            profile: null as any,
+            error: 'Invalid Supabase API Key. Please verify VITE_SUPABASE_ANON_KEY in your .env file or use the Demo accounts below.'
+          };
+        }
         return { profile: null as any, error: error.message };
+      }
+
+      // Check if Supabase detected an existing user (empty identities array)
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        return {
+          profile: null as any,
+          error: 'An account with this email already exists. Please switch to "Sign In" to log in.'
+        };
       }
 
       // Check if Supabase requires email confirmation (session is null)
@@ -219,10 +274,23 @@ export const authService = {
       const profile: Profile = {
         id: data.user!.id,
         email: normalizedEmail,
-        full_name: fullName,
+        full_name: fullName.trim(),
         role,
         created_at: new Date().toISOString(),
       };
+
+      // Ensure profile row exists in Supabase
+      try {
+        await supabase.from('profiles').upsert({
+          id: profile.id,
+          email: profile.email,
+          full_name: profile.full_name,
+          role: profile.role,
+        });
+      } catch (e) {
+        console.warn('Could not auto-insert profile on signup:', e);
+      }
+
       setStored(STORAGE_KEYS.CURRENT_USER, profile);
       return { profile };
     } else {
@@ -232,7 +300,7 @@ export const authService = {
         id: 'user-' + Math.random().toString(36).substring(2, 9),
         email: normalizedEmail,
         role,
-        full_name: fullName,
+        full_name: fullName.trim(),
         created_at: new Date().toISOString(),
       };
       profiles.push(newProfile);

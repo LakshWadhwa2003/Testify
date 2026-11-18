@@ -8,7 +8,7 @@ interface SupabaseSetupModalProps {
 }
 
 export const SupabaseSetupModal: React.FC<SupabaseSetupModalProps> = ({ isOpen, onClose }) => {
-  const { isConfigured, user, switchMockRole } = useAuth();
+  const { isConfigured } = useAuth();
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -76,40 +76,6 @@ export const SupabaseSetupModal: React.FC<SupabaseSetupModalProps> = ({ isOpen, 
                   ? 'Your tests, questionnaires, and marks are securely stored in your Supabase Postgres database with Row Level Security.'
                   : 'You can test the full app right now using local simulated storage, or connect your Supabase project in 2 minutes below.'}
               </p>
-            </div>
-          </div>
-
-          {/* Quick Demo Switcher */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
-            <span className="font-semibold text-slate-800 dark:text-slate-200 block mb-1">
-              Active User Role
-            </span>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3">
-              Switch roles on the fly to test teacher paper uploads vs student questionnaire submissions:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => switchMockRole('admin')}
-                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${user?.role === 'admin'
-                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
-                    : 'border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700'
-                  }`}
-              >
-                <Shield className="w-3.5 h-3.5" />
-                Switch to Admin (Teacher)
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMockRole('student')}
-                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${user?.role === 'student'
-                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
-                    : 'border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700'
-                  }`}
-              >
-                <Check className="w-3.5 h-3.5" />
-                Switch to Student
-              </button>
             </div>
           </div>
 

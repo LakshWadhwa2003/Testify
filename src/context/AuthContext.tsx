@@ -37,8 +37,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshUser();
 
     if (isSupabaseConfigured && supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-        refreshUser();
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setLoading(false);
+        } else if (session?.user) {
+          refreshUser();
+        }
       });
       return () => {
         subscription.unsubscribe();
@@ -47,9 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, pass: string, role?: UserRole) => {
-    setLoading(true);
     const res = await authService.login(email, pass, role);
-    setLoading(false);
     if (res.error) {
       return { success: false, error: res.error };
     }
@@ -58,14 +61,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signup = async (email: string, pass: string, name: string, role: UserRole = 'student') => {
-    setLoading(true);
     const res = await authService.signup(email, pass, name, role);
-    setLoading(false);
-    if (res.error) {
+    if (res.error && !res.requiresEmailConfirmation) {
       return {
         success: false,
         error: res.error,
-        requiresEmailConfirmation: res.requiresEmailConfirmation
+        requiresEmailConfirmation: false
+      };
+    }
+    if (res.requiresEmailConfirmation) {
+      return {
+        success: false,
+        error: res.error,
+        requiresEmailConfirmation: true
       };
     }
     if (res.profile) {
@@ -75,13 +83,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    setLoading(true);
     await authService.logout();
     setUser(null);
-    setLoading(false);
   };
 
   const switchMockRole = (role: UserRole) => {
+    // Role switching is strictly prohibited while logged in.
+    // Users must sign out and authenticate via login/sign-in.
+    if (user) {
+      console.warn('Role switching is prohibited while logged in. Please sign out first.');
+      return;
+    }
     const updated = authService.switchMockUser(role);
     if (updated) {
       setUser(updated);

@@ -12,6 +12,7 @@ import { TestReportView } from './components/TestReportView';
 import { EditTestView } from './components/EditTestView';
 import { AdminUploadPaper } from './components/AdminUploadPaper';
 import { UserManagementView } from './components/UserManagementView';
+import { AdminDashboardView } from './components/AdminDashboardView';
 import { testsService, userTestAccessService } from './services/api';
 import { TestPaper, Question } from './types/database';
 
@@ -110,6 +111,13 @@ export function AppContent() {
           setActiveTest(null);
         }}
       />
+    );
+  }
+
+  // Admin Console (Unified modern dashboard matching reference design)
+  if (isAdmin) {
+    return (
+      <AdminDashboardView onStartTestPreview={handleStartTest} />
     );
   }
 

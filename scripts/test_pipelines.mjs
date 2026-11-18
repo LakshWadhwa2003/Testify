@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const url = 'https://gtmtvvmqqnsnalzczela.supabase.co';
-const key = 'sb_publishable_oxLWLL_2cthSYj9GTqw-MA_GhNO3eOr';
+const url = process.env.VITE_SUPABASE_URL || 'https://gtmtvvmqqnsnalzczela.supabase.co';
+const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const sb = createClient(url, key);
 
 async function runVerification() {

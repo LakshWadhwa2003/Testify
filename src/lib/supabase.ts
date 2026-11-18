@@ -7,7 +7,9 @@ export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
   supabaseAnonKey &&
   supabaseUrl.startsWith('http') &&
-  !supabaseUrl.includes('your-project-id')
+  !supabaseUrl.includes('your-project-id') &&
+  supabaseUrl !== 'local' &&
+  supabaseUrl !== 'none'
 );
 
 export const supabase = isSupabaseConfigured
