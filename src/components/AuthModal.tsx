@@ -8,7 +8,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
-  const { login, signup, switchMockRole } = useAuth();
+  const { login, signup } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -355,50 +355,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
             )}
           </button>
         </form>
-
-        {/* Divider */}
-        <div className="relative my-5">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-white/35" />
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-bold">
-            <span
-              className="px-3 py-0.5 rounded-full text-slate-800 font-sans"
-              style={{
-                background: 'rgba(255, 255, 255, 0.35)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.5)',
-              }}
-            >
-              Or Continue With
-            </span>
-          </div>
-        </div>
-
-        {/* Quick Demo Access (Liquid Glass Buttons) */}
-        <div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => switchMockRole('admin')}
-              className="py-2.5 px-3 rounded-xl border border-white/45 bg-white/25 hover:bg-white/40 text-slate-900 text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm backdrop-blur-md hover:-translate-y-0.5 active:scale-95"
-            >
-              <Shield className="w-4 h-4 text-amber-600" />
-              <span>Demo Teacher</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMockRole('student')}
-              className="py-2.5 px-3 rounded-xl border border-white/45 bg-white/25 hover:bg-white/40 text-slate-900 text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm backdrop-blur-md hover:-translate-y-0.5 active:scale-95"
-            >
-              <GraduationCap className="w-4 h-4 text-indigo-700" />
-              <span>Demo Student</span>
-            </button>
-          </div>
-          <p className="text-[10px] text-center font-medium text-slate-700/80 mt-2">
-            One-click instant login to test Teacher and Student workflows
-          </p>
-        </div>
       </div>
     </div>
   );

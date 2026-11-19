@@ -136,8 +136,6 @@ export const authService = {
 
   async login(email: string, password: string, mockRoleOverride?: UserRole): Promise<{ profile: Profile; error?: string }> {
     const normalizedEmail = email.trim().toLowerCase();
-    const demoEmails = ['teacher@muskaan.edu', 'admin@muskaan.edu', 'student@muskaan.edu', 'priya@muskaan.edu', 'rohit@muskaan.edu'];
-    const isDemoAccount = demoEmails.includes(normalizedEmail);
 
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -146,20 +144,6 @@ export const authService = {
       });
 
       if (error) {
-        // If it's a known demo email and remote credentials failed, log in with local demo account seamlessly
-        if (isDemoAccount) {
-          seedInitialDataIfNeeded();
-          const profiles = getStored<Profile[]>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
-          const demoUser = profiles.find((p) => p.email.toLowerCase() === normalizedEmail) || {
-            id: 'admin-001',
-            email: normalizedEmail,
-            role: normalizedEmail.includes('teacher') || normalizedEmail.includes('admin') ? 'admin' : 'student',
-            full_name: normalizedEmail.includes('teacher') || normalizedEmail.includes('admin') ? 'Dr. Muskaan Sharma (Teacher)' : 'Student User',
-            created_at: new Date().toISOString(),
-          } as Profile;
-          setStored(STORAGE_KEYS.CURRENT_USER, demoUser);
-          return { profile: demoUser };
-        }
 
         // Friendly messaging for unconfirmed emails
         if (error.message?.toLowerCase().includes('email not confirmed')) {
@@ -179,7 +163,7 @@ export const authService = {
         if (error.message?.toLowerCase().includes('invalid api key') || error.message?.toLowerCase().includes('api key')) {
           return {
             profile: null as any,
-            error: 'Invalid Supabase API Key. Please verify VITE_SUPABASE_ANON_KEY in your .env file or use the Demo accounts below.'
+            error: 'Invalid Supabase API Key. Please verify VITE_SUPABASE_ANON_KEY in your .env file.'
           };
         }
 
@@ -249,7 +233,7 @@ export const authService = {
         if (error.message?.toLowerCase().includes('invalid api key') || error.message?.toLowerCase().includes('api key')) {
           return {
             profile: null as any,
-            error: 'Invalid Supabase API Key. Please verify VITE_SUPABASE_ANON_KEY in your .env file or use the Demo accounts below.'
+            error: 'Invalid Supabase API Key. Please verify VITE_SUPABASE_ANON_KEY in your .env file.'
           };
         }
         return { profile: null as any, error: error.message };

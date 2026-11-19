@@ -1,35 +1,6 @@
 import { Profile, TestPaper, Question, Submission } from '../types/database';
 
-export const INITIAL_PROFILES: Profile[] = [
-  {
-    id: 'admin-001',
-    email: 'teacher@muskaan.edu',
-    full_name: 'Dr. Muskaan Sharma (Teacher)',
-    role: 'admin',
-    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-  },
-  {
-    id: 'student-001',
-    email: 'student@muskaan.edu',
-    full_name: 'Aarav Patel (Student)',
-    role: 'student',
-    created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-  },
-  {
-    id: 'student-002',
-    email: 'priya@muskaan.edu',
-    full_name: 'Priya Verma',
-    role: 'student',
-    created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-  },
-  {
-    id: 'student-003',
-    email: 'rohit@muskaan.edu',
-    full_name: 'Rohit Gupta',
-    role: 'student',
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-  },
-];
+export const INITIAL_PROFILES: Profile[] = [];
 
 export const INITIAL_TESTS: TestPaper[] = [
   {
@@ -185,50 +156,4 @@ export const INITIAL_QUESTIONS: Question[] = [
   }
 ];
 
-export const INITIAL_SUBMISSIONS: Submission[] = [
-  {
-    id: 'sub-sample-001',
-    test_id: '11111111-1111-4111-8111-111111111111',
-    user_id: 'student-001',
-    score: 6,
-    total_points: 8,
-    percentage: 75,
-    status: 'completed',
-    time_spent_seconds: 720,
-    attempt_number: 1,
-    submitted_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    user_email: 'student@muskaan.edu',
-    user_name: 'Aarav Patel (Student)',
-    test_title: 'LNAT Paper 1: Medical Ethics & Patient Autonomy',
-  },
-  {
-    id: 'sub-sample-002',
-    test_id: '11111111-1111-4111-8111-111111111111',
-    user_id: 'student-001',
-    score: 8,
-    total_points: 8,
-    percentage: 100,
-    status: 'completed',
-    time_spent_seconds: 540,
-    attempt_number: 2,
-    submitted_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    user_email: 'student@muskaan.edu',
-    user_name: 'Aarav Patel (Student)',
-    test_title: 'LNAT Paper 1: Medical Ethics & Patient Autonomy',
-  },
-  {
-    id: 'sub-sample-003',
-    test_id: '22222222-2222-4222-8222-222222222222',
-    user_id: 'student-002',
-    score: 35,
-    total_points: 42,
-    percentage: 83,
-    status: 'completed',
-    time_spent_seconds: 3200,
-    attempt_number: 1,
-    submitted_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-    user_email: 'priya@muskaan.edu',
-    user_name: 'Priya Verma',
-    test_title: 'LNAT Paper 2: Constitutional Law & State Neutrality',
-  }
-];
+export const INITIAL_SUBMISSIONS: Submission[] = [];
