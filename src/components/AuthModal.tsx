@@ -183,11 +183,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               setError(null);
               setInfoNotice(null);
             }}
-            className={`py-2.5 text-xs font-bold rounded-xl transition-all duration-200 touch-manipulation active:scale-95 ${
-              !isRegister
+            className={`py-2.5 text-xs font-bold rounded-xl transition-all duration-200 touch-manipulation active:scale-95 ${!isRegister
                 ? 'bg-white/90 text-slate-900 shadow-md backdrop-blur-md border border-white/60'
                 : 'text-slate-700 hover:text-slate-900 hover:bg-white/20'
-            }`}
+              }`}
           >
             Sign In
           </button>
@@ -198,11 +197,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               setError(null);
               setInfoNotice(null);
             }}
-            className={`py-2.5 text-xs font-bold rounded-xl transition-all duration-200 touch-manipulation active:scale-95 ${
-              isRegister
+            className={`py-2.5 text-xs font-bold rounded-xl transition-all duration-200 touch-manipulation active:scale-95 ${isRegister
                 ? 'bg-white/90 text-slate-900 shadow-md backdrop-blur-md border border-white/60'
                 : 'text-slate-700 hover:text-slate-900 hover:bg-white/20'
-            }`}
+              }`}
           >
             Create Account
           </button>
@@ -309,11 +307,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                 <button
                   type="button"
                   onClick={() => setRole('student')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all touch-manipulation active:scale-95 ${
-                    role === 'student'
+                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all touch-manipulation active:scale-95 ${role === 'student'
                       ? 'bg-white/95 text-indigo-950 shadow-md border-2 border-indigo-600/70 ring-2 ring-indigo-500/20'
                       : 'bg-white/20 text-slate-800 hover:bg-white/35 border border-white/50'
-                  }`}
+                    }`}
                 >
                   <GraduationCap className="w-4 h-4 text-indigo-600" />
                   Student
@@ -321,11 +318,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                 <button
                   type="button"
                   onClick={() => setRole('admin')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all touch-manipulation active:scale-95 ${
-                    role === 'admin'
+                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all touch-manipulation active:scale-95 ${role === 'admin'
                       ? 'bg-white/95 text-amber-950 shadow-md border-2 border-amber-600/70 ring-2 ring-amber-500/20'
                       : 'bg-white/20 text-slate-800 hover:bg-white/35 border border-white/50'
-                  }`}
+                    }`}
                 >
                   <Shield className="w-4 h-4 text-amber-600" />
                   Admin (Teacher)

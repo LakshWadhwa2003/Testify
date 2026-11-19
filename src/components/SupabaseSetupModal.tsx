@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Database, Check, Copy, ExternalLink, X, Shield, AlertCircle } from 'lucide-react';
+import { Database, Check, Copy, ExternalLink, X, AlertCircle } from 'lucide-react';
 
 interface SupabaseSetupModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface SupabaseSetupModalProps {
 export const SupabaseSetupModal: React.FC<SupabaseSetupModalProps> = ({ isOpen, onClose }) => {
   const { isConfigured } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [copiedMigration, setCopiedMigration] = useState(false);
 
   if (!isOpen) return null;
 
@@ -24,6 +25,19 @@ export const SupabaseSetupModal: React.FC<SupabaseSetupModalProps> = ({ isOpen, 
       // fallback
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const handleCopyMigration = async () => {
+    try {
+      const res = await fetch('/supabase/migration_add_user_test_access.sql');
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      setCopiedMigration(true);
+      setTimeout(() => setCopiedMigration(false), 2500);
+    } catch {
+      setCopiedMigration(true);
+      setTimeout(() => setCopiedMigration(false), 2500);
     }
   };
 
@@ -112,14 +126,24 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOi...`}
             </ol>
           </div>
 
-          {/* Copy Schema Button */}
-          <button
-            onClick={handleCopySchema}
-            className="w-full py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-indigo-500 text-slate-800 dark:text-slate-200 font-semibold flex items-center justify-center gap-2 transition-all bg-white dark:bg-slate-800 active:scale-95 shadow-sm"
-          >
-            {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-400" />}
-            <span>{copied ? 'SQL Schema Copied to Clipboard!' : 'Copy SQL Schema Script (supabase/schema.sql)'}</span>
-          </button>
+          {/* Action Buttons */}
+          <div className="space-y-2">
+            <button
+              onClick={handleCopySchema}
+              className="w-full py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-indigo-500 text-slate-800 dark:text-slate-200 font-semibold flex items-center justify-center gap-2 transition-all bg-white dark:bg-slate-800 active:scale-95 shadow-sm"
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-400" />}
+              <span>{copied ? 'Full SQL Schema Copied!' : 'Copy Full SQL Schema (supabase/schema.sql)'}</span>
+            </button>
+
+            <button
+              onClick={handleCopyMigration}
+              className="w-full py-2 px-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 text-slate-600 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all bg-slate-50 dark:bg-slate-800/60 active:scale-95"
+            >
+              {copiedMigration ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-400" />}
+              <span>{copiedMigration ? 'User Test Access Migration Copied!' : 'Copy User Test Access Migration SQL'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Footer */}

@@ -50,7 +50,7 @@ export const TestsCatalogView: React.FC<TestsCatalogViewProps> = ({
         testsService.getTests(isAdmin),
         submissionsService.getSubmissions(isAdmin ? undefined : user?.id),
         (!isAdmin && user?.id)
-          ? userTestAccessService.getUserAccessMap(user.id)
+          ? userTestAccessService.getUserAccessMap(user.id, user.email)
           : Promise.resolve({}),
       ];
 

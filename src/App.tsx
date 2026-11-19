@@ -65,7 +65,7 @@ export function AppContent() {
 
     // If student, check if test is active for their account
     if (!isAdmin && user) {
-      const isAllowed = await userTestAccessService.isTestActiveForUser(user.id, testId);
+      const isAllowed = await userTestAccessService.isTestActiveForUser(user.id, testId, user.email);
       if (!isAllowed) {
         alert('This test is currently deactivated for your account. Please contact your instructor to request access.');
         return;

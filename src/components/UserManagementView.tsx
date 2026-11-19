@@ -186,9 +186,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
     });
 
     try {
-      await userTestAccessService.setUserTestAccess(userId, testId, newStatus);
-      const test = tests.find((t) => t.id === testId);
       const student = students.find((u) => u.id === userId);
+      await userTestAccessService.setUserTestAccess(userId, testId, newStatus, student?.email);
+      const test = tests.find((t) => t.id === testId);
       showToast(
         newStatus
           ? `Activated "${test?.title?.slice(0, 24)}..." for ${student?.full_name || 'student'}`
@@ -204,6 +204,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
   // Bulk activate/deactivate for a student
   const handleBulkUserAccess = async (userId: string, makeActive: boolean) => {
     const testIds = tests.map((t) => t.id);
+    const student = students.find((u) => u.id === userId);
 
     // Optimistic UI update
     setAccessList((prev) => {
@@ -211,6 +212,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
       const newItems: UserTestAccess[] = testIds.map((tid) => ({
         id: 'bulk-' + tid + '-' + Date.now(),
         user_id: userId,
+        user_email: student?.email,
         test_id: tid,
         is_active: makeActive,
         updated_at: new Date().toISOString(),
@@ -219,8 +221,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
     });
 
     try {
-      await userTestAccessService.setBulkUserTestAccess(userId, testIds, makeActive);
-      const student = students.find((u) => u.id === userId);
+      await userTestAccessService.setBulkUserTestAccess(userId, testIds, makeActive, student?.email);
       showToast(
         makeActive
           ? `All tests activated for ${student?.full_name || 'student'}`
@@ -235,14 +236,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
 
   // Bulk activate/deactivate for a test across all students
   const handleBulkTestAccess = async (testId: string, makeActive: boolean) => {
-    const studentIds = students.map((u) => u.id);
+    const studentList = students.map((u) => ({ id: u.id, email: u.email }));
+    const studentIds = studentList.map((u) => u.id);
 
     // Optimistic UI update
     setAccessList((prev) => {
       const filtered = prev.filter((a) => a.test_id !== testId || !studentIds.includes(a.user_id));
-      const newItems: UserTestAccess[] = studentIds.map((uid) => ({
-        id: 'bulk-test-' + uid + '-' + Date.now(),
-        user_id: uid,
+      const newItems: UserTestAccess[] = studentList.map((st) => ({
+        id: 'bulk-test-' + st.id + '-' + Date.now(),
+        user_id: st.id,
+        user_email: st.email,
         test_id: testId,
         is_active: makeActive,
         updated_at: new Date().toISOString(),
@@ -251,7 +254,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
     });
 
     try {
-      await userTestAccessService.setBulkTestUsersAccess(testId, studentIds, makeActive);
+      await userTestAccessService.setBulkTestUsersAccess(testId, studentList, makeActive);
       const test = tests.find((t) => t.id === testId);
       showToast(
         makeActive
@@ -285,7 +288,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
         await userTestAccessService.setBulkUserTestAccess(
           created.id,
           tests.map((t) => t.id),
-          true
+          true,
+          created.email
         );
       }
 

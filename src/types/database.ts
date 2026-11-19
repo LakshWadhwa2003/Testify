@@ -79,6 +79,7 @@ export interface SubmissionAnswer {
 export interface UserTestAccess {
   id: string;
   user_id: string;
+  user_email?: string;
   test_id: string;
   is_active: boolean;
   updated_at?: string;

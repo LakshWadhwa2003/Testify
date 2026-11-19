@@ -326,6 +326,10 @@ export interface TestChangeEvent {
   test?: TestPaper;
   questions?: Question[];
   is_published?: boolean;
+  userId?: string;
+  userEmail?: string;
+  is_active?: boolean;
+  accessList?: UserTestAccess[];
   timestamp: number;
 }
 
@@ -355,7 +359,7 @@ if (typeof window !== 'undefined') {
       try {
         const parsed = JSON.parse(e.newValue);
         notifyLocalSubscribers(parsed);
-      } catch {}
+      } catch { }
     }
   });
 }
@@ -399,6 +403,44 @@ function applyIncomingEventToStorage(event: TestChangeEvent) {
         test.is_published = event.is_published;
         setStored(STORAGE_KEYS.TESTS, tests);
       }
+    } else if (event.action === 'access_update') {
+      const records = getStored<UserTestAccess[]>(STORAGE_KEYS.USER_TEST_ACCESS, []);
+      if (event.accessList && event.accessList.length > 0) {
+        const map = new Map<string, UserTestAccess>();
+        for (const r of records) {
+          map.set(`${r.user_id}_${r.test_id}`, r);
+          if (r.user_email) {
+            map.set(`${r.user_email.toLowerCase()}_${r.test_id}`, r);
+          }
+        }
+        for (const item of event.accessList) {
+          map.set(`${item.user_id}_${item.test_id}`, item);
+          if (item.user_email) {
+            map.set(`${item.user_email.toLowerCase()}_${item.test_id}`, item);
+          }
+        }
+        setStored(STORAGE_KEYS.USER_TEST_ACCESS, Array.from(new Set(map.values())));
+      } else if (event.userId && event.testId && typeof event.is_active === 'boolean') {
+        const isoDate = new Date(event.timestamp || Date.now()).toISOString();
+        const existingIdx = records.findIndex((r) =>
+          (r.user_id === event.userId && r.test_id === event.testId) ||
+          (event.userEmail && r.user_email && r.user_email.toLowerCase() === event.userEmail.toLowerCase() && r.test_id === event.testId)
+        );
+        const updatedItem: UserTestAccess = {
+          id: existingIdx >= 0 ? records[existingIdx].id : 'access-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          user_id: event.userId,
+          user_email: event.userEmail,
+          test_id: event.testId,
+          is_active: event.is_active,
+          updated_at: isoDate,
+        };
+        if (existingIdx >= 0) {
+          records[existingIdx] = updatedItem;
+        } else {
+          records.push(updatedItem);
+        }
+        setStored(STORAGE_KEYS.USER_TEST_ACCESS, records);
+      }
     }
   } catch (err) {
     console.error('Error applying incoming test event to local storage:', err);
@@ -435,8 +477,8 @@ function initSupabaseRealtime() {
           const action = payload.eventType === 'INSERT'
             ? 'create'
             : payload.eventType === 'DELETE'
-            ? 'delete'
-            : 'update';
+              ? 'delete'
+              : 'update';
           const test = payload.new as TestPaper | undefined;
           const testId = payload.new?.id || payload.old?.id;
           notifyLocalSubscribers({ action, testId, test, timestamp: Date.now() });
@@ -454,8 +496,46 @@ function initSupabaseRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_test_access' },
         (payload: any) => {
-          const testId = payload.new?.test_id || payload.old?.test_id;
-          notifyLocalSubscribers({ action: 'access_update', testId, timestamp: Date.now() });
+          const record = payload.new || payload.old;
+          const testId = record?.test_id;
+          const userId = record?.user_id;
+          const isActive = payload.new?.is_active ?? false;
+          notifyLocalSubscribers({
+            action: 'access_update',
+            testId,
+            userId,
+            is_active: isActive,
+            accessList: payload.new ? [payload.new as UserTestAccess] : undefined,
+            timestamp: Date.now(),
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+        (payload: any) => {
+          if (payload.new?.avatar_url && (payload.new.avatar_url.startsWith('access:') || payload.new.avatar_url.startsWith('{'))) {
+            try {
+              const raw = payload.new.avatar_url.startsWith('access:') ? payload.new.avatar_url.slice(7) : payload.new.avatar_url;
+              const parsed = JSON.parse(raw);
+              const accessMap: Record<string, boolean> = parsed.test_access || parsed || {};
+              const items: UserTestAccess[] = Object.entries(accessMap).map(([testId, isActive]) => ({
+                id: `prof-${payload.new.id}-${testId}`,
+                user_id: payload.new.id,
+                user_email: payload.new.email,
+                test_id: testId,
+                is_active: Boolean(isActive),
+                updated_at: parsed.updated_at || new Date().toISOString(),
+              }));
+              notifyLocalSubscribers({
+                action: 'access_update',
+                userId: payload.new.id,
+                userEmail: payload.new.email,
+                accessList: items,
+                timestamp: Date.now(),
+              });
+            } catch { }
+          }
         }
       )
       .on('broadcast', { event: 'test_papers_changed' }, (payload: any) => {
@@ -483,14 +563,14 @@ export function broadcastTestChange(event: TestChangeEvent) {
   if (testBroadcastChannel) {
     try {
       testBroadcastChannel.postMessage(event);
-    } catch {}
+    } catch { }
   }
 
   // 3. Fallback to storage event for other tabs
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem('testify_test_sync_event', JSON.stringify(event));
-    } catch {}
+    } catch { }
   }
 
   // 4. Broadcast over Supabase WebSocket to other devices/browsers
@@ -1544,30 +1624,88 @@ export const userTestAccessService = {
     seedInitialDataIfNeeded();
     let remoteList: UserTestAccess[] = [];
     if (isSupabaseConfigured && supabase) {
+      // 1. Try public.user_test_access table in Supabase
       try {
         const { data, error } = await supabase.from('user_test_access').select('*');
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
           remoteList = data as UserTestAccess[];
         }
       } catch {
-        // user_test_access may not be created in Supabase yet; fallback cleanly
+        // Table may not exist yet or schema cache not loaded
       }
+
+      // 2. Resilient fallback: Also check public.profiles (avatar_url fallback) in Supabase.
+      // Since profiles table is always present and readable by all users, this ensures
+      // that admin activations persist and sync across devices even without running DDL migrations.
+      try {
+        const { data: profiles, error: profErr } = await supabase
+          .from('profiles')
+          .select('id, email, avatar_url');
+        if (!profErr && profiles) {
+          for (const p of profiles) {
+            if (p.avatar_url && (p.avatar_url.startsWith('access:') || p.avatar_url.startsWith('{'))) {
+              try {
+                const raw = p.avatar_url.startsWith('access:')
+                  ? p.avatar_url.slice(7)
+                  : p.avatar_url;
+                const parsed = JSON.parse(raw);
+                const accessMap: Record<string, boolean> = parsed.test_access || parsed || {};
+                const updatedAt = parsed.updated_at || new Date().toISOString();
+                for (const [testId, isActive] of Object.entries(accessMap)) {
+                  const existingIdx = remoteList.findIndex((r) => r.user_id === p.id && r.test_id === testId);
+                  if (existingIdx < 0) {
+                    remoteList.push({
+                      id: `prof-${p.id}-${testId}`,
+                      user_id: p.id,
+                      user_email: p.email,
+                      test_id: testId,
+                      is_active: Boolean(isActive),
+                      updated_at: updatedAt,
+                    });
+                  }
+                }
+              } catch { }
+            }
+          }
+        }
+      } catch { }
     }
 
     const localList = getStored<UserTestAccess[]>(STORAGE_KEYS.USER_TEST_ACCESS, []);
     const map = new Map<string, UserTestAccess>();
-    for (const item of remoteList) {
-      map.set(`${item.user_id}_${item.test_id}`, item);
-    }
+
+    // Start with local items
     for (const item of localList) {
       map.set(`${item.user_id}_${item.test_id}`, item);
     }
-    return Array.from(map.values());
+
+    // Merge remote items: remote takes precedence if newer timestamp or if local is missing
+    for (const item of remoteList) {
+      const key = `${item.user_id}_${item.test_id}`;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, item);
+      } else {
+        const remoteTime = item.updated_at ? new Date(item.updated_at).getTime() : 0;
+        const localTime = existing.updated_at ? new Date(existing.updated_at).getTime() : 0;
+        if (remoteTime >= localTime) {
+          map.set(key, item);
+        }
+      }
+    }
+
+    const merged = Array.from(map.values());
+    setStored(STORAGE_KEYS.USER_TEST_ACCESS, merged);
+    return merged;
   },
 
-  async getUserAccessMap(userId: string): Promise<Record<string, boolean>> {
+  async getUserAccessMap(userId: string, userEmail?: string): Promise<Record<string, boolean>> {
     const all = await this.getAllAccess();
-    const userRecords = all.filter((r) => r.user_id === userId);
+    const normalizedEmail = userEmail?.trim().toLowerCase();
+    const userRecords = all.filter((r) =>
+      r.user_id === userId ||
+      (normalizedEmail && r.user_email && r.user_email.toLowerCase() === normalizedEmail)
+    );
     const accessMap: Record<string, boolean> = {};
     for (const r of userRecords) {
       accessMap[r.test_id] = r.is_active;
@@ -1575,13 +1713,17 @@ export const userTestAccessService = {
     return accessMap;
   },
 
-  async isTestActiveForUser(userId: string, testId: string): Promise<boolean> {
-    const accessMap = await this.getUserAccessMap(userId);
+  async isTestActiveForUser(userId: string, testId: string, userEmail?: string): Promise<boolean> {
+    const accessMap = await this.getUserAccessMap(userId, userEmail);
     // By default all tests are deactivated for students; active only if explicitly set to true
     return accessMap[testId] === true;
   },
 
-  async setUserTestAccess(userId: string, testId: string, isActive: boolean): Promise<void> {
+  async setUserTestAccess(userId: string, testId: string, isActive: boolean, userEmail?: string): Promise<void> {
+    const timestamp = Date.now();
+    const isoDate = new Date(timestamp).toISOString();
+
+    // 1. Remote Supabase: Try user_test_access table
     if (isSupabaseConfigured && supabase && isValidUuid(userId) && isValidUuid(testId)) {
       try {
         const { error } = await supabase
@@ -1591,11 +1733,11 @@ export const userTestAccessService = {
               user_id: userId,
               test_id: testId,
               is_active: isActive,
-              updated_at: new Date().toISOString(),
+              updated_at: isoDate,
             },
             { onConflict: 'user_id,test_id' }
           );
-        if (error) {
+        if (error && error.code !== 'PGRST205') {
           console.warn('Supabase user_test_access upsert error:', error);
         }
       } catch (err) {
@@ -1603,33 +1745,261 @@ export const userTestAccessService = {
       }
     }
 
+    // 2. Remote Supabase: Resilient sync via profiles fallback
+    if (isSupabaseConfigured && supabase && isValidUuid(userId)) {
+      try {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', userId)
+          .maybeSingle();
+
+        let accessMap: Record<string, boolean> = {};
+        if (prof?.avatar_url) {
+          try {
+            const raw = prof.avatar_url.startsWith('access:')
+              ? prof.avatar_url.slice(7)
+              : prof.avatar_url;
+            const parsed = JSON.parse(raw);
+            accessMap = parsed.test_access || parsed || {};
+          } catch { }
+        }
+        accessMap[testId] = isActive;
+        const newAvatarUrl = 'access:' + JSON.stringify({
+          test_access: accessMap,
+          updated_at: isoDate,
+        });
+
+        await supabase
+          .from('profiles')
+          .update({ avatar_url: newAvatarUrl })
+          .eq('id', userId);
+      } catch (err) {
+        console.warn('Supabase profile test access sync error:', err);
+      }
+    }
+
+    // 3. Local Storage update
     const records = getStored<UserTestAccess[]>(STORAGE_KEYS.USER_TEST_ACCESS, []);
-    const existingIdx = records.findIndex((r) => r.user_id === userId && r.test_id === testId);
+    const normalizedEmail = userEmail?.trim().toLowerCase();
+    const existingIdx = records.findIndex((r) =>
+      (r.user_id === userId && r.test_id === testId) ||
+      (normalizedEmail && r.user_email && r.user_email.toLowerCase() === normalizedEmail && r.test_id === testId)
+    );
+    const updatedRecord: UserTestAccess = {
+      id: existingIdx >= 0 ? records[existingIdx].id : 'access-' + timestamp + '-' + Math.random().toString(36).substring(2, 6),
+      user_id: userId,
+      user_email: userEmail,
+      test_id: testId,
+      is_active: isActive,
+      updated_at: isoDate,
+    };
     if (existingIdx >= 0) {
-      records[existingIdx].is_active = isActive;
-      records[existingIdx].updated_at = new Date().toISOString();
+      records[existingIdx] = updatedRecord;
     } else {
-      records.push({
-        id: 'access-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-        user_id: userId,
-        test_id: testId,
-        is_active: isActive,
-        updated_at: new Date().toISOString(),
-      });
+      records.push(updatedRecord);
     }
     setStored(STORAGE_KEYS.USER_TEST_ACCESS, records);
-    broadcastTestChange({ action: 'access_update', testId, timestamp: Date.now() });
+
+    // 4. Real-time broadcast
+    broadcastTestChange({
+      action: 'access_update',
+      testId,
+      userId,
+      userEmail,
+      is_active: isActive,
+      accessList: [updatedRecord],
+      timestamp,
+    });
   },
 
-  async setBulkUserTestAccess(userId: string, testIds: string[], isActive: boolean): Promise<void> {
-    for (const testId of testIds) {
-      await this.setUserTestAccess(userId, testId, isActive);
+  async setBulkUserTestAccess(userId: string, testIds: string[], isActive: boolean, userEmail?: string): Promise<void> {
+    const timestamp = Date.now();
+    const isoDate = new Date(timestamp).toISOString();
+
+    // 1. Remote Supabase: Try user_test_access batch upsert
+    if (isSupabaseConfigured && supabase && isValidUuid(userId)) {
+      const validTestIds = testIds.filter(isValidUuid);
+      if (validTestIds.length > 0) {
+        try {
+          const payload = validTestIds.map((tid) => ({
+            user_id: userId,
+            test_id: tid,
+            is_active: isActive,
+            updated_at: isoDate,
+          }));
+          await supabase.from('user_test_access').upsert(payload, { onConflict: 'user_id,test_id' });
+        } catch { }
+      }
     }
+
+    // 2. Remote Supabase: Resilient sync via profiles fallback
+    if (isSupabaseConfigured && supabase && isValidUuid(userId)) {
+      try {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', userId)
+          .maybeSingle();
+
+        let accessMap: Record<string, boolean> = {};
+        if (prof?.avatar_url) {
+          try {
+            const raw = prof.avatar_url.startsWith('access:')
+              ? prof.avatar_url.slice(7)
+              : prof.avatar_url;
+            const parsed = JSON.parse(raw);
+            accessMap = parsed.test_access || parsed || {};
+          } catch { }
+        }
+        for (const tid of testIds) {
+          accessMap[tid] = isActive;
+        }
+        const newAvatarUrl = 'access:' + JSON.stringify({
+          test_access: accessMap,
+          updated_at: isoDate,
+        });
+        await supabase
+          .from('profiles')
+          .update({ avatar_url: newAvatarUrl })
+          .eq('id', userId);
+      } catch (err) {
+        console.warn('Bulk profile access sync error:', err);
+      }
+    }
+
+    // 3. Local Storage update
+    const records = getStored<UserTestAccess[]>(STORAGE_KEYS.USER_TEST_ACCESS, []);
+    const normalizedEmail = userEmail?.trim().toLowerCase();
+    const newItems: UserTestAccess[] = [];
+
+    for (const tid of testIds) {
+      const existingIdx = records.findIndex((r) =>
+        (r.user_id === userId && r.test_id === tid) ||
+        (normalizedEmail && r.user_email && r.user_email.toLowerCase() === normalizedEmail && r.test_id === tid)
+      );
+      const item: UserTestAccess = {
+        id: existingIdx >= 0 ? records[existingIdx].id : 'access-' + timestamp + '-' + Math.random().toString(36).substring(2, 6),
+        user_id: userId,
+        user_email: userEmail,
+        test_id: tid,
+        is_active: isActive,
+        updated_at: isoDate,
+      };
+      if (existingIdx >= 0) {
+        records[existingIdx] = item;
+      } else {
+        records.push(item);
+      }
+      newItems.push(item);
+    }
+    setStored(STORAGE_KEYS.USER_TEST_ACCESS, records);
+
+    // 4. Real-time broadcast
+    broadcastTestChange({
+      action: 'access_update',
+      userId,
+      userEmail,
+      is_active: isActive,
+      accessList: newItems,
+      timestamp,
+    });
   },
 
-  async setBulkTestUsersAccess(testId: string, userIds: string[], isActive: boolean): Promise<void> {
-    for (const userId of userIds) {
-      await this.setUserTestAccess(userId, testId, isActive);
+  async setBulkTestUsersAccess(testId: string, users: Array<string | { id: string; email?: string }>, isActive: boolean): Promise<void> {
+    const timestamp = Date.now();
+    const isoDate = new Date(timestamp).toISOString();
+
+    const normalizedUsers: Array<{ id: string; email?: string }> = users.map((u) =>
+      typeof u === 'string' ? { id: u } : u
+    );
+
+    // 1. Remote Supabase: Try user_test_access batch upsert
+    if (isSupabaseConfigured && supabase && isValidUuid(testId)) {
+      const validUserIds = normalizedUsers.map((u) => u.id).filter(isValidUuid);
+      if (validUserIds.length > 0) {
+        try {
+          const payload = validUserIds.map((uid) => ({
+            user_id: uid,
+            test_id: testId,
+            is_active: isActive,
+            updated_at: isoDate,
+          }));
+          await supabase.from('user_test_access').upsert(payload, { onConflict: 'user_id,test_id' });
+        } catch { }
+      }
     }
+
+    // 2. Remote Supabase: Update each user's profile fallback
+    if (isSupabaseConfigured && supabase) {
+      const sb = supabase;
+      await Promise.all(
+        normalizedUsers
+          .filter((u) => isValidUuid(u.id))
+          .map(async (u) => {
+            try {
+              const { data: prof } = await sb
+                .from('profiles')
+                .select('avatar_url')
+                .eq('id', u.id)
+                .maybeSingle();
+              let accessMap: Record<string, boolean> = {};
+              if (prof?.avatar_url) {
+                try {
+                  const raw = prof.avatar_url.startsWith('access:') ? prof.avatar_url.slice(7) : prof.avatar_url;
+                  const parsed = JSON.parse(raw);
+                  accessMap = parsed.test_access || parsed || {};
+                } catch { }
+              }
+              accessMap[testId] = isActive;
+              await sb
+                .from('profiles')
+                .update({
+                  avatar_url: 'access:' + JSON.stringify({
+                    test_access: accessMap,
+                    updated_at: isoDate,
+                  }),
+                })
+                .eq('id', u.id);
+            } catch { }
+          })
+      );
+    }
+
+    // 3. Local Storage update
+    const records = getStored<UserTestAccess[]>(STORAGE_KEYS.USER_TEST_ACCESS, []);
+    const newItems: UserTestAccess[] = [];
+
+    for (const u of normalizedUsers) {
+      const normalizedEmail = u.email?.trim().toLowerCase();
+      const existingIdx = records.findIndex((r) =>
+        (r.user_id === u.id && r.test_id === testId) ||
+        (normalizedEmail && r.user_email && r.user_email.toLowerCase() === normalizedEmail && r.test_id === testId)
+      );
+      const item: UserTestAccess = {
+        id: existingIdx >= 0 ? records[existingIdx].id : 'access-' + timestamp + '-' + Math.random().toString(36).substring(2, 6),
+        user_id: u.id,
+        user_email: u.email,
+        test_id: testId,
+        is_active: isActive,
+        updated_at: isoDate,
+      };
+      if (existingIdx >= 0) {
+        records[existingIdx] = item;
+      } else {
+        records.push(item);
+      }
+      newItems.push(item);
+    }
+    setStored(STORAGE_KEYS.USER_TEST_ACCESS, records);
+
+    // 4. Real-time broadcast
+    broadcastTestChange({
+      action: 'access_update',
+      testId,
+      is_active: isActive,
+      accessList: newItems,
+      timestamp,
+    });
   }
 };

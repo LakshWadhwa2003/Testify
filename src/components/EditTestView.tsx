@@ -402,7 +402,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
               <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
                 Edit Test Paper
               </h2>
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 shrink-0">
+              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 dark:bg-slate-800 dark:text-slate-200 shrink-0">
                 {category || 'General'}
               </span>
             </div>
@@ -422,8 +422,8 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                 else setActiveTab('form');
               }}
               className={`px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-all touch-manipulation ${activeTab === 'form'
-                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white dark:text-slate-200 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
             >
               Form
@@ -435,8 +435,8 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                 else setActiveTab('json');
               }}
               className={`px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-all touch-manipulation ${activeTab === 'json'
-                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white dark:text-slate-200 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
             >
               JSON
@@ -447,7 +447,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
             type="button"
             disabled={saving || loading}
             onClick={() => handleSave()}
-            className="px-3.5 sm:px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all disabled:opacity-50 touch-manipulation"
+            className="px-3.5 sm:px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 active:scale-95 text-xs font-bold shadow-md shadow-black/10 dark:shadow-none flex items-center gap-1.5 transition-all disabled:opacity-50 touch-manipulation"
           >
             {saving ? (
               <>
@@ -466,7 +466,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
 
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center">
-          <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3" />
+          <div className="w-8 h-8 border-3 border-slate-900 dark:border-white border-t-transparent rounded-full animate-spin mb-3" />
           <span className="text-xs font-medium text-slate-400">Loading test paper and questions...</span>
         </div>
       ) : (
@@ -475,8 +475,8 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
           {statusMessage && (
             <div
               className={`p-4 rounded-2xl text-xs font-medium border flex items-center gap-2.5 animate-fadeIn ${statusMessage.type === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                  : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
                 }`}
             >
               {statusMessage.type === 'success' ? (
@@ -492,7 +492,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-indigo-600" />
+                <BookOpen className="w-4 h-4 text-slate-900 dark:text-white" />
                 Assessment Settings & Duration Timer
               </h3>
 
@@ -503,7 +503,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsPublished(!isPublished)}
-                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ${isPublished ? 'bg-indigo-600 justify-end' : 'bg-slate-300 dark:bg-slate-700 justify-start'
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ${isPublished ? 'bg-slate-900 dark:bg-white justify-end' : 'bg-slate-300 dark:bg-slate-700 justify-start'
                     }`}
                   title={isPublished ? 'Click to unpublish' : 'Click to publish'}
                 >
@@ -523,7 +523,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                   placeholder="e.g. LNAT Paper 1: Medical Ethics & Patient Autonomy"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:ring-slate-500"
                 />
               </div>
 
@@ -536,18 +536,18 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                   placeholder="e.g. LNAT - Critical Reasoning"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:ring-slate-500"
                 />
               </div>
 
               {/* TIMER ADJUSTMENT PANEL */}
-              <div className="bg-indigo-50/50 dark:bg-indigo-950/30 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/60 space-y-2.5">
+              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 dark:border-slate-700 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-indigo-600" />
+                  <label className="text-xs font-bold text-indigo-950 dark:text-slate-200 flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-slate-900 dark:text-white" />
                     Test Timer Duration
                   </label>
-                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-2xs">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-300 dark:border-slate-700 dark:border-slate-700 shadow-2xs">
                     {formatDurationReadable(durationMinutes)}
                   </span>
                 </div>
@@ -577,7 +577,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                       max="360"
                       value={durationMinutes}
                       onChange={(e) => setDurationMinutes(Math.max(1, Number(e.target.value) || 1))}
-                      className="w-full text-center font-bold text-sm px-2 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                      className="w-full text-center font-bold text-sm px-2 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-400 dark:ring-slate-500 shadow-2xs"
                     />
                     <span className="absolute right-2.5 top-2 text-[10px] text-slate-400 font-medium pointer-events-none">
                       mins
@@ -611,8 +611,8 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                       type="button"
                       onClick={() => setDurationMinutes(preset)}
                       className={`text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all shrink-0 ${durationMinutes === preset
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700 hover:bg-indigo-50 hover:text-indigo-600'
+                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-100 dark:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                         }`}
                     >
                       {preset}m
@@ -630,7 +630,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                   placeholder="Guidelines, topics tested, or student instructions..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:ring-slate-500"
                 />
               </div>
             </div>
@@ -643,10 +643,10 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <ListChecks className="w-4 h-4 text-indigo-600" />
+                    <ListChecks className="w-4 h-4 text-slate-900 dark:text-white" />
                     Questions ({questions.length})
                   </h3>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200/50 dark:border-indigo-800">
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold border border-slate-300 dark:border-slate-700/50 dark:border-slate-700">
                     {totalPoints} Total Points
                   </span>
                 </div>
@@ -660,7 +660,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                         placeholder="Search questions..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200 w-36 sm:w-48 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200 w-36 sm:w-48 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:ring-slate-500"
                       />
                     </div>
                   )}
@@ -668,7 +668,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                   <button
                     type="button"
                     onClick={handleAddQuestion}
-                    className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add Question</span>
@@ -686,12 +686,12 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                   <div
                     key={idx}
                     id={`question-card-${idx}`}
-                    className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors space-y-4"
+                    className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:border-indigo-300 dark:hover:border-slate-900 dark:border-white transition-colors space-y-4"
                   >
                     {/* Top bar of question card */}
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                       <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center">
                           {idx + 1}
                         </span>
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
@@ -742,7 +742,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                         <button
                           type="button"
                           onClick={() => handleDuplicateQuestion(idx)}
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800 transition-colors"
                           title="Duplicate question"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -797,8 +797,8 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                               });
                             }}
                             className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all text-center ${isSelected
-                                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 shadow-sm'
-                                : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                              ? 'border-slate-900 dark:border-white bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 shadow-sm'
+                              : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
                               }`}
                           >
                             {label}
@@ -818,7 +818,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                         placeholder="Type question or passage problem here..."
                         value={q.question_text}
                         onChange={(e) => handleUpdateQuestion(idx, { question_text: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-sans"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:ring-slate-500 font-sans"
                       />
                     </div>
 
@@ -844,8 +844,8 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                                   type="button"
                                   onClick={() => handleUpdateQuestion(idx, { correct_answer: opt })}
                                   className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${isCorrect
-                                      ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                                      : 'border-slate-300 dark:border-slate-600 hover:border-slate-400'
+                                    ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+                                    : 'border-slate-300 dark:border-slate-600 hover:border-slate-400'
                                     }`}
                                   title={isCorrect ? 'Correct Answer' : 'Click to set as correct answer'}
                                 >
@@ -858,8 +858,8 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                                   onChange={(e) => handleUpdateOption(idx, optIdx, e.target.value)}
                                   placeholder={`Option ${String.fromCharCode(65 + optIdx)}`}
                                   className={`flex-1 px-3 py-2 rounded-xl border text-xs focus:outline-none ${isCorrect
-                                      ? 'border-emerald-500 bg-emerald-50/40 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-200 font-semibold'
-                                      : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
+                                    ? 'border-emerald-500 bg-emerald-50/40 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-200 font-semibold'
+                                    : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
                                     }`}
                                 />
 
@@ -881,7 +881,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                         <button
                           type="button"
                           onClick={() => handleAddOption(idx)}
-                          className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 flex items-center gap-1 pt-1"
+                          className="text-[11px] font-semibold text-slate-900 dark:text-white hover:text-slate-900 dark:hover:text-white flex items-center gap-1 pt-1"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           Add Another Option
@@ -903,8 +903,8 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                                 type="button"
                                 onClick={() => handleUpdateQuestion(idx, { correct_answer: val })}
                                 className={`py-3 rounded-xl border text-xs font-semibold transition-all ${isCorrect
-                                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-sm'
-                                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-sm'
+                                  : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
                                   }`}
                               >
                                 {val} {isCorrect && '✓ (Correct Key)'}
@@ -940,7 +940,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                         placeholder="Explanation of why this answer is correct..."
                         value={q.explanation}
                         onChange={(e) => handleUpdateQuestion(idx, { explanation: e.target.value })}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-slate-400 dark:ring-slate-500"
                       />
                     </div>
                   </div>
@@ -951,7 +951,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
               <button
                 type="button"
                 onClick={handleAddQuestion}
-                className="w-full py-4 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors active:scale-[0.99] bg-white dark:bg-slate-900 shadow-sm"
+                className="w-full py-4 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-800 dark:border-slate-200 hover:text-slate-900 dark:hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors active:scale-[0.99] bg-white dark:bg-slate-900 shadow-sm"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Another Question</span>
@@ -962,7 +962,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <FileCode className="w-4 h-4 text-indigo-600" />
+                  <FileCode className="w-4 h-4 text-slate-900 dark:text-white" />
                   Bulk JSON Questions Format
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -974,7 +974,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                 rows={18}
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
-                className="w-full p-4 font-mono text-xs rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-900 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+                className="w-full p-4 font-mono text-xs rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-900 text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:ring-slate-500 shadow-inner"
               />
             </div>
           )}
@@ -1003,7 +1003,7 @@ export const EditTestView: React.FC<EditTestViewProps> = ({
                 type="button"
                 disabled={saving || loading}
                 onClick={() => handleSave()}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 active:scale-95 text-xs font-bold shadow-md shadow-black/10 dark:shadow-none flex items-center gap-1.5 transition-all disabled:opacity-50"
               >
                 {saving ? (
                   <>
