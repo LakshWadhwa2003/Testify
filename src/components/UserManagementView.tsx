@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Profile, TestPaper, Submission, UserTestAccess } from '../types/database';
-import { usersService, testsService, submissionsService, userTestAccessService } from '../services/api';
+import { usersService, testsService, submissionsService, userTestAccessService, isDemoStudentOrAccount } from '../services/api';
 import {
   Users,
   Search,
@@ -18,7 +18,8 @@ import {
   X,
   BarChart3,
   KeyRound,
-  ChevronLeft
+  ChevronLeft,
+  Trash2
 } from 'lucide-react';
 
 interface UserManagementViewProps {
@@ -79,10 +80,10 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
       setSubmissions(subsData);
       setAccessList(accessData);
 
-      // Default select first student (admins are excluded)
-      const studentUsers = usersData.filter((u) => u.role === 'student');
-      if (!selectedUserId && studentUsers.length > 0) {
-        setSelectedUserId(studentUsers[0].id);
+      // Default select first student (admins and demo accounts are excluded)
+      const studentUsers = usersData.filter((u) => u.role === 'student' && !isDemoStudentOrAccount(u));
+      if (!selectedUserId || !studentUsers.some((u) => u.id === selectedUserId)) {
+        setSelectedUserId(studentUsers.length > 0 ? studentUsers[0].id : null);
       }
 
       if (!selectedTestId && testsData.length > 0) {
@@ -117,9 +118,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
     };
   }, [loadData]);
 
-  // ONLY STUDENTS: All admins are off the list!
+  // ONLY STUDENTS: All admins and demo accounts are off the list!
   const students = useMemo(() => {
-    return users.filter((u) => u.role === 'student');
+    return users.filter((u) => u.role === 'student' && !isDemoStudentOrAccount(u));
   }, [users]);
 
   // Map access fast lookup: `userId_testId` -> boolean
@@ -304,6 +305,30 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
       alert('Failed to add student: ' + (err.message || err));
     } finally {
       setSavingUser(false);
+    }
+  };
+
+  // Delete student from roster
+  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null);
+
+  const handleDeleteStudent = async (studentId: string, studentName: string) => {
+    if (!window.confirm(`Are you sure you want to remove "${studentName}" from the student roster? This will also remove their test access allocations and submissions.`)) {
+      return;
+    }
+    setDeletingStudentId(studentId);
+    try {
+      await usersService.deleteUser(studentId);
+      showToast(`Removed "${studentName}" from roster`);
+      if (selectedUserId === studentId) {
+        setSelectedUserId(null);
+        setMobileView('roster');
+      }
+      await loadData(false);
+    } catch (err: any) {
+      console.error('Failed to remove student:', err);
+      showToast('Error removing student');
+    } finally {
+      setDeletingStudentId(null);
     }
   };
 
@@ -562,10 +587,23 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                         </div>
                       </div>
 
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] text-slate-400 font-medium block">
-                          {studentSubs.length} {studentSubs.length === 1 ? 'attempt' : 'attempts'}
-                        </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 font-medium block">
+                            {studentSubs.length} {studentSubs.length === 1 ? 'attempt' : 'attempts'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteStudent(s.id, s.full_name || s.email);
+                          }}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
+                          title={`Remove ${s.full_name || s.email}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   );
@@ -607,7 +645,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                     </div>
                   </div>
 
-                  {/* Bulk Actions */}
+                  {/* Bulk Actions & Removal */}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -626,6 +664,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                     >
                       <Ban className="w-3.5 h-3.5" />
                       <span>Deactivate All</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStudent(selectedStudent.id, selectedStudent.full_name || selectedStudent.email)}
+                      disabled={deletingStudentId === selectedStudent.id}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:text-slate-400 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 hover:border-rose-200 dark:hover:border-rose-800 text-xs font-semibold transition-colors active:scale-95 touch-manipulation disabled:opacity-50"
+                      title="Remove student from roster"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{deletingStudentId === selectedStudent.id ? 'Removing...' : 'Remove'}</span>
                     </button>
                   </div>
                 </div>

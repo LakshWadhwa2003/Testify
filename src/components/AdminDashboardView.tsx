@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { TestPaper, Submission, Profile, UserTestAccess } from '../types/database';
-import { testsService, submissionsService, usersService, userTestAccessService } from '../services/api';
+import { testsService, submissionsService, usersService, userTestAccessService, isDemoStudentOrAccount } from '../services/api';
 import { TestsCatalogView } from './TestsCatalogView';
 import { MarksView } from './MarksView';
 import { UserManagementView } from './UserManagementView';
@@ -81,7 +81,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
       ]);
       setTests(testsData);
       setSubmissions(subsData);
-      setStudents(usersData.filter((u) => u.role === 'student'));
+      setStudents(usersData.filter((u) => u.role === 'student' && !isDemoStudentOrAccount(u)));
       setAccessList(accessData);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -421,10 +421,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                 </div>
                 <div className="text-xs hidden sm:block leading-tight">
                   <p className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">
-                    {user?.full_name || 'Dr. Muskaan Sharma'}
+                    {user?.full_name || 'Admin'}
                   </p>
                   <p className="text-slate-400 text-[10px] truncate max-w-[130px]">
-                    {user?.email || 'admin@muskaan.edu'}
+                    {user?.email || ''}
                   </p>
                 </div>
               </div>

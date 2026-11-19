@@ -33,6 +33,109 @@ function isValidUuid(id?: string | null): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
 
+// ----------------------------------------------------------------------
+// DEMO / LEGACY STUDENT SANITIZATION
+// ----------------------------------------------------------------------
+export const DEMO_STUDENT_EMAILS = new Set([
+  'student@muskaan.edu',
+  'priya@muskaan.edu',
+  'rohit@muskaan.edu',
+  'teacher@muskaan.edu',
+]);
+
+export const DEMO_STUDENT_IDS = new Set([
+  'student-001',
+  'student-002',
+  'student-003',
+  'admin-001',
+]);
+
+export const DEMO_STUDENT_NAMES = [
+  'aarav patel',
+  'priya verma',
+  'rohit gupta',
+];
+
+export function isDemoStudentOrAccount(user?: { id?: string; email?: string; full_name?: string | null } | null): boolean {
+  if (!user) return false;
+  if (user.id && DEMO_STUDENT_IDS.has(user.id)) return true;
+  if (user.email && DEMO_STUDENT_EMAILS.has(user.email.toLowerCase().trim())) return true;
+  if (user.full_name) {
+    const nameLower = user.full_name.toLowerCase().trim();
+    if (DEMO_STUDENT_NAMES.some((n) => nameLower.includes(n))) return true;
+  }
+  return false;
+}
+
+export function purgeDemoAccountsFromStorage(): void {
+  try {
+    // 1. Purge profiles
+    const rawProfiles = localStorage.getItem(STORAGE_KEYS.PROFILES);
+    if (rawProfiles) {
+      try {
+        const parsed = JSON.parse(rawProfiles);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((p) => !isDemoStudentOrAccount(p));
+          localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(cleaned));
+        }
+      } catch { }
+    }
+
+    // 2. Purge submissions
+    const rawSubs = localStorage.getItem(STORAGE_KEYS.SUBMISSIONS);
+    if (rawSubs) {
+      try {
+        const parsed = JSON.parse(rawSubs);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((s) => {
+            if (s.user_id && DEMO_STUDENT_IDS.has(s.user_id)) return false;
+            if (s.user_email && DEMO_STUDENT_EMAILS.has(s.user_email.toLowerCase().trim())) return false;
+            if (s.user_name) {
+              const nameLower = s.user_name.toLowerCase();
+              if (DEMO_STUDENT_NAMES.some((n) => nameLower.includes(n))) return false;
+            }
+            if (s.id && (s.id === 'sub-sample-001' || s.id === 'sub-sample-002' || s.id === 'sub-sample-003' || s.id.startsWith('sub-sample-'))) return false;
+            return true;
+          });
+          localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(cleaned));
+        }
+      } catch { }
+    }
+
+    // 3. Purge user test access
+    const rawAccess = localStorage.getItem(STORAGE_KEYS.USER_TEST_ACCESS);
+    if (rawAccess) {
+      try {
+        const parsed = JSON.parse(rawAccess);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((a) => {
+            if (a.user_id && DEMO_STUDENT_IDS.has(a.user_id)) return false;
+            if (a.user_email && DEMO_STUDENT_EMAILS.has(a.user_email.toLowerCase().trim())) return false;
+            return true;
+          });
+          localStorage.setItem(STORAGE_KEYS.USER_TEST_ACCESS, JSON.stringify(cleaned));
+        }
+      } catch { }
+    }
+
+    // 4. Purge current user if it's a demo student
+    const rawUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    if (rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        if (isDemoStudentOrAccount(parsed)) {
+          localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+        }
+      } catch { }
+    }
+  } catch (e) {
+    console.warn('Storage purge error:', e);
+  }
+}
+
+// Immediately purge any stale demo accounts from previous sessions
+purgeDemoAccountsFromStorage();
+
 // Initialize Mock Store
 function getStored<T>(key: string, fallback: T): T {
   try {
@@ -53,9 +156,10 @@ function setStored<T>(key: string, value: T): void {
 }
 
 // Ensure mock storage is seeded
-const SEED_VERSION_KEY = 'muskaan_lnat_seeded_v4';
+const SEED_VERSION_KEY = 'muskaan_lnat_seeded_v5';
 
 export function seedInitialDataIfNeeded() {
+  purgeDemoAccountsFromStorage();
   const isAlreadySeeded = localStorage.getItem(SEED_VERSION_KEY) === 'true';
   const existingTests = getStored<any[]>(STORAGE_KEYS.TESTS, []);
 
@@ -1194,7 +1298,7 @@ export const submissionsService = {
       time_spent_seconds: timeSpentSeconds,
       attempt_number: attemptNumber,
       submitted_at: new Date().toISOString(),
-      user_email: currentProfile?.email || 'student@muskaan.edu',
+      user_email: currentProfile?.email || '',
       user_name: currentProfile?.full_name || 'Student',
       test_title: test.title,
     };
@@ -1321,35 +1425,54 @@ export const submissionsService = {
             attempt_number: row.attempt_number ? Number(row.attempt_number) : 1,
             submitted_at: row.submitted_at,
             test_title: row.tests?.title || 'Assessment Test',
-            user_email: prof?.email || 'student@muskaan.edu',
+            user_email: prof?.email || '',
             user_name: prof?.full_name || 'Student',
           };
         });
 
-        // Include any local demo submissions if present
-        const localList = getStored<Submission[]>(STORAGE_KEYS.SUBMISSIONS, []);
-        const filteredLocal = userId ? localList.filter(s => s.user_id === userId) : localList;
+        // Include any local non-demo submissions if present
+        const localList = getStored<Submission[]>(STORAGE_KEYS.SUBMISSIONS, []).filter(
+          (s) =>
+            !DEMO_STUDENT_IDS.has(s.user_id) &&
+            (!s.user_email || !DEMO_STUDENT_EMAILS.has(s.user_email.toLowerCase())) &&
+            (!s.user_name || !DEMO_STUDENT_NAMES.some((n) => s.user_name!.toLowerCase().includes(n))) &&
+            !s.id?.startsWith('sub-sample-')
+        );
+        const filteredLocal = userId ? localList.filter((s) => s.user_id === userId) : localList;
 
         // Merge without duplicates
-        const ids = new Set(remoteList.map(r => r.id));
+        const ids = new Set(remoteList.map((r) => r.id));
         const combined = [...remoteList];
         for (const loc of filteredLocal) {
           if (!ids.has(loc.id)) {
             combined.push(loc);
           }
         }
-        return normalizeSubmissionsAttempts(combined);
+        const cleaned = combined.filter(
+          (s) =>
+            !DEMO_STUDENT_IDS.has(s.user_id) &&
+            (!s.user_email || !DEMO_STUDENT_EMAILS.has(s.user_email.toLowerCase())) &&
+            (!s.user_name || !DEMO_STUDENT_NAMES.some((n) => s.user_name!.toLowerCase().includes(n))) &&
+            !s.id?.startsWith('sub-sample-')
+        );
+        return normalizeSubmissionsAttempts(cleaned);
       } catch (e) {
         console.warn('Error loading remote submissions, falling back to local storage:', e);
       }
     }
 
     seedInitialDataIfNeeded();
-    const submissions = getStored<Submission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS);
+    const submissions = getStored<Submission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS).filter(
+      (s) =>
+        !DEMO_STUDENT_IDS.has(s.user_id) &&
+        (!s.user_email || !DEMO_STUDENT_EMAILS.has(s.user_email.toLowerCase())) &&
+        (!s.user_name || !DEMO_STUDENT_NAMES.some((n) => s.user_name!.toLowerCase().includes(n))) &&
+        !s.id?.startsWith('sub-sample-')
+    );
     const tests = getStored<TestPaper[]>(STORAGE_KEYS.TESTS, INITIAL_TESTS);
 
     const enriched: Submission[] = submissions.map((s) => {
-      const test = tests.find(t => t.id === s.test_id);
+      const test = tests.find((t) => t.id === s.test_id);
       return {
         ...s,
         attempt_number: s.attempt_number || 1,
@@ -1363,7 +1486,7 @@ export const submissionsService = {
 
   async getUserTestAttempts(userId: string, testId: string): Promise<Submission[]> {
     const all = await this.getSubmissions(userId);
-    return all.filter(s => s.test_id === testId && s.user_id === userId);
+    return all.filter((s) => s.test_id === testId && s.user_id === userId);
   },
 
   async getSubmissionDetail(submissionId: string): Promise<DetailedSubmission | null> {
@@ -1377,7 +1500,7 @@ export const submissionsService = {
 
         if (!subErr && sub) {
           // Fetch user profile separately
-          let userEmail = 'student@muskaan.edu';
+          let userEmail = '';
           let userName = 'Student';
           if (sub.user_id && isValidUuid(sub.user_id)) {
             try {
@@ -1518,6 +1641,7 @@ export const submissionsService = {
 // ----------------------------------------------------------------------
 export const usersService = {
   async getUsers(): Promise<Profile[]> {
+    purgeDemoAccountsFromStorage();
     seedInitialDataIfNeeded();
     let remoteProfiles: Profile[] = [];
     if (isSupabaseConfigured && supabase) {
@@ -1527,24 +1651,26 @@ export const usersService = {
           .select('*')
           .order('created_at', { ascending: false });
         if (!error && data) {
-          remoteProfiles = data as Profile[];
+          remoteProfiles = (data as Profile[]).filter((p) => !isDemoStudentOrAccount(p));
         }
       } catch (e) {
         console.warn('Supabase profiles fetch error, using local fallback:', e);
       }
     }
 
-    const localProfiles = getStored<Profile[]>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
+    const localProfiles = getStored<Profile[]>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES).filter(
+      (p) => !isDemoStudentOrAccount(p)
+    );
     const map = new Map<string, Profile>();
     for (const p of remoteProfiles) {
       map.set(p.id, p);
     }
     for (const p of localProfiles) {
-      if (!map.has(p.id)) {
+      if (!map.has(p.id) && !isDemoStudentOrAccount(p)) {
         map.set(p.id, p);
       }
     }
-    return Array.from(map.values());
+    return Array.from(map.values()).filter((p) => !isDemoStudentOrAccount(p));
   },
 
   async createUser(userData: { email: string; full_name: string; role: UserRole }): Promise<Profile> {
@@ -1605,6 +1731,12 @@ export const usersService = {
   async deleteUser(userId: string): Promise<void> {
     if (isSupabaseConfigured && supabase && isValidUuid(userId)) {
       try {
+        await supabase.from('user_test_access').delete().eq('user_id', userId);
+      } catch { }
+      try {
+        await supabase.from('submissions').delete().eq('user_id', userId);
+      } catch { }
+      try {
         await supabase.from('profiles').delete().eq('id', userId);
       } catch (e) {
         console.warn('Supabase delete user error:', e);
@@ -1613,6 +1745,14 @@ export const usersService = {
     let profiles = getStored<Profile[]>(STORAGE_KEYS.PROFILES, INITIAL_PROFILES);
     profiles = profiles.filter((p) => p.id !== userId);
     setStored(STORAGE_KEYS.PROFILES, profiles);
+
+    let access = getStored<UserTestAccess[]>(STORAGE_KEYS.USER_TEST_ACCESS, []);
+    access = access.filter((a) => a.user_id !== userId);
+    setStored(STORAGE_KEYS.USER_TEST_ACCESS, access);
+
+    let subs = getStored<Submission[]>(STORAGE_KEYS.SUBMISSIONS, []);
+    subs = subs.filter((s) => s.user_id !== userId);
+    setStored(STORAGE_KEYS.SUBMISSIONS, subs);
   }
 };
 
@@ -1621,6 +1761,7 @@ export const usersService = {
 // ----------------------------------------------------------------------
 export const userTestAccessService = {
   async getAllAccess(): Promise<UserTestAccess[]> {
+    purgeDemoAccountsFromStorage();
     seedInitialDataIfNeeded();
     let remoteList: UserTestAccess[] = [];
     if (isSupabaseConfigured && supabase) {
@@ -1671,7 +1812,9 @@ export const userTestAccessService = {
       } catch { }
     }
 
-    const localList = getStored<UserTestAccess[]>(STORAGE_KEYS.USER_TEST_ACCESS, []);
+    const localList = getStored<UserTestAccess[]>(STORAGE_KEYS.USER_TEST_ACCESS, []).filter(
+      (a) => !DEMO_STUDENT_IDS.has(a.user_id) && (!a.user_email || !DEMO_STUDENT_EMAILS.has(a.user_email.toLowerCase()))
+    );
     const map = new Map<string, UserTestAccess>();
 
     // Start with local items
@@ -1681,6 +1824,9 @@ export const userTestAccessService = {
 
     // Merge remote items: remote takes precedence if newer timestamp or if local is missing
     for (const item of remoteList) {
+      if (DEMO_STUDENT_IDS.has(item.user_id) || (item.user_email && DEMO_STUDENT_EMAILS.has(item.user_email.toLowerCase()))) {
+        continue;
+      }
       const key = `${item.user_id}_${item.test_id}`;
       const existing = map.get(key);
       if (!existing) {
@@ -1694,7 +1840,9 @@ export const userTestAccessService = {
       }
     }
 
-    const merged = Array.from(map.values());
+    const merged = Array.from(map.values()).filter(
+      (a) => !DEMO_STUDENT_IDS.has(a.user_id) && (!a.user_email || !DEMO_STUDENT_EMAILS.has(a.user_email.toLowerCase()))
+    );
     setStored(STORAGE_KEYS.USER_TEST_ACCESS, merged);
     return merged;
   },
