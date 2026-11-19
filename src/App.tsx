@@ -100,7 +100,7 @@ export function AppContent() {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
         <div className="w-9 h-9 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3" />
-        <span className="text-xs font-semibold text-slate-500">Loading Muskaan...</span>
+        <span className="text-xs font-semibold text-slate-500">Loading</span>
       </div>
     );
   }

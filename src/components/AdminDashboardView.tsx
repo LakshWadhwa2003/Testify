@@ -36,8 +36,6 @@ import {
   Layers,
   Activity,
   Play,
-  RotateCcw,
-  Smartphone,
   ChevronRight,
   Filter,
   BarChart3,
@@ -138,25 +136,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
     };
   }, [tests, submissions, students]);
 
-  // Exam / Assessment clock state
-  const [examSeconds, setExamSeconds] = useState(24 * 3600 + 8);
-  const [isTimerRunning, setIsTimerRunning] = useState(true);
-
-  useEffect(() => {
-    if (!isTimerRunning) return;
-    const timer = setInterval(() => {
-      setExamSeconds((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isTimerRunning]);
-
-  const formatTimer = (totalSec: number) => {
-    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
-    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
-    const s = String(totalSec % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-  };
-
   // Switch navigation tabs smoothly
   const handleNavClick = (tab: AdminNavTab) => {
     setEditingTestId(null);
@@ -234,8 +213,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                       type="button"
                       onClick={() => handleNavClick(item.id)}
                       className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer text-left ${isActive
-                          ? 'text-white shadow-md'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                        ? 'text-white shadow-md'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       style={
                         isActive
@@ -251,8 +230,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                       {item.count !== undefined && item.count > 0 && (
                         <span
                           className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive
-                              ? 'bg-white/20 text-white'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700'
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700'
                             }`}
                         >
                           {item.count}
@@ -273,8 +252,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                   type="button"
                   onClick={() => handleNavClick('profile')}
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left cursor-pointer ${activeNav === 'profile'
-                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                     }`}
                 >
                   <Settings className="w-4 h-4 shrink-0" />
@@ -333,8 +312,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                         type="button"
                         onClick={() => handleNavClick(item.id)}
                         className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${isActive
-                            ? 'text-white'
-                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          ? 'text-white'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                           }`}
                         style={isActive ? { backgroundColor: '#0C115B' } : undefined}
                       >
@@ -427,7 +406,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
             </div>
           </div>
 
-          {/* Page Title & Subtitle + Primary Action Buttons */}
+          {/* Page Title & Subtitle */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
             <div>
               <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -441,25 +420,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
               <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Plan, prioritize, and monitor examinations and candidate evaluations with ease.
               </p>
-            </div>
-
-            {/* Quick Action Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingTestId(null);
-                  handleNavClick('create');
-                }}
-                className="inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold text-white shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                style={{
-                  backgroundColor: '#0C115B',
-                  boxShadow: '0 8px 20px rgba(12, 17, 91, 0.3)',
-                }}
-              >
-                <Plus className="w-4 h-4" />
-                <span>+ Add Paper</span>
-              </button>
             </div>
           </div>
         </header>
@@ -725,8 +685,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                           <div className="text-right">
                             <span
                               className={`inline-block text-xs px-2.5 py-1 rounded-full font-bold ${isPassing
-                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                  : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
                                 }`}
                             >
                               {sub.percentage}% Score
@@ -779,184 +739,51 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                   </div>
                 </div>
 
-                {/* 2. Project Progress Radial Gauge (Radial circle in reference) */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm transition-all hover:shadow-lg text-center">
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 text-left">
-                    Examination Progress
-                  </h2>
-                  <div className="relative w-36 h-36 mx-auto mb-4 flex items-center justify-center">
-                    {/* SVG Radial Gauge */}
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        className="stroke-slate-100 dark:stroke-slate-800"
-                        strokeWidth="10"
-                        fill="transparent"
-                      />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        style={{
-                          stroke: '#0C115B',
-                          strokeDasharray: 251.2,
-                          strokeDashoffset: 251.2 - (251.2 * stats.passRate) / 100,
-                        }}
-                        strokeWidth="10"
-                        strokeLinecap="round"
-                        fill="transparent"
-                        className="transition-all duration-1000 ease-out"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-                        {stats.passRate}%
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-medium">Pass Rate</span>
+                {/* 2. Available Test Papers Catalog List */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm transition-all hover:shadow-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900 dark:text-white">Available Papers</h2>
+                      <p className="text-[11px] text-slate-400">Registered examination tests</p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => handleNavClick('create')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>New</span>
+                    </button>
                   </div>
 
-                  <div className="flex justify-center gap-4 text-[11px] pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#0C115B' }} />
-                      <span className="text-slate-500 font-medium">Passed ({stats.passRate}%)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-                      <span className="text-slate-500 font-medium">Attempted</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ROW 3: THREE CARDS MATCHING REFERENCE
-                1. Test Papers List (Project in reference)
-                2. Mobile App Download Card (Download our Mobile App in reference)
-                3. Time Tracker (Time Tracker in reference)
-            */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-              {/* Card 1: Active Test Papers Catalog List */}
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm transition-all hover:shadow-lg">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Available Papers</h2>
-                    <p className="text-[11px] text-slate-400">Registered examination tests</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleNavClick('create')}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>New</span>
-                  </button>
-                </div>
-
-                <div className="space-y-2.5">
-                  {tests.slice(0, 5).map((test, idx) => {
-                    const badge = getCategoryBadge(idx);
-                    return (
-                      <div
-                        key={test.id}
-                        onClick={() => setEditingTestId(test.id)}
-                        className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all cursor-pointer group"
-                      >
+                  <div className="space-y-2.5">
+                    {tests.slice(0, 5).map((test, idx) => {
+                      const badge = getCategoryBadge(idx);
+                      return (
                         <div
-                          className={`w-9 h-9 ${badge.bg} rounded-xl flex items-center justify-center text-lg text-white shadow-xs group-hover:scale-110 group-hover:rotate-6 transition-transform`}
+                          key={test.id}
+                          onClick={() => setEditingTestId(test.id)}
+                          className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all cursor-pointer group"
                         >
-                          {badge.icon}
+                          <div
+                            className={`w-9 h-9 ${badge.bg} rounded-xl flex items-center justify-center text-lg text-white shadow-xs group-hover:scale-110 group-hover:rotate-6 transition-transform`}
+                          >
+                            {badge.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-slate-900 dark:text-white text-xs truncate">
+                              {test.title}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {test.duration_minutes} mins &bull; {test.total_points} Pts &bull; {test.category || 'General'}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-slate-900 dark:text-white text-xs truncate">
-                            {test.title}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            {test.duration_minutes} mins &bull; {test.total_points} Pts &bull; {test.category || 'General'}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {tests.length === 0 && (
-                    <div className="text-center py-4 text-xs text-slate-400">No test papers registered yet.</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Card 2: Mobile App Promotion Card (Matching reference black card) */}
-              <div
-                className="flex flex-col justify-between rounded-2xl p-5 text-white shadow-xl relative overflow-hidden group"
-                style={{
-                  backgroundColor: '#0C115B',
-                  boxShadow: '0 16px 36px rgba(12, 17, 91, 0.35)',
-                }}
-              >
-                <div className="relative z-10">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3">
-                    <Smartphone className="w-5 h-5 text-white" />
-                  </div>
-                  <h2 className="text-lg font-extrabold mb-1 tracking-tight">iOS & Mobile PWA App</h2>
-                  <p className="text-xs text-white/75 mb-4 leading-relaxed">
-                    Install Testify directly on iPhone, iPad, or Android for offline exams and fullscreen safe-area support.
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => alert('Tap the Share icon in Safari and select "Add to Home Screen" to install Testify on iOS.')}
-                      className="w-full py-2.5 px-3 rounded-xl bg-white text-slate-950 hover:bg-white/90 font-bold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer shadow-sm"
-                    >
-                      <span>🍎 Add to iOS Home Screen</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => alert('Install via browser menu on Android or desktop Chrome.')}
-                      className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
-                    >
-                      <span>📱 Install Web PWA</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Time Tracker / Exam Clock (Matching reference black card) */}
-              <div
-                className="flex flex-col justify-between rounded-2xl p-5 text-white shadow-xl relative overflow-hidden group"
-                style={{
-                  backgroundColor: '#0C115B',
-                  boxShadow: '0 16px 36px rgba(12, 17, 91, 0.35)',
-                }}
-              >
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-base font-bold text-white">Live Exam Timer</h2>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
-                      Synchronized
-                    </span>
-                  </div>
-                  <p className="text-xs text-white/70 mb-3">Live examination countdown system</p>
-                  <div className="text-4xl sm:text-5xl font-mono font-extrabold mb-4 tracking-tight text-white py-1">
-                    {formatTimer(examSeconds)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsTimerRunning((prev) => !prev)}
-                      className="flex-1 py-2 px-3 rounded-xl bg-white text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all hover:bg-white/90 active:scale-95 cursor-pointer"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>{isTimerRunning ? 'Pause Clock' : 'Resume Clock'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setExamSeconds(24 * 3600 + 8)}
-                      className="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95 cursor-pointer"
-                      title="Reset clock"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
+                      );
+                    })}
+                    {tests.length === 0 && (
+                      <div className="text-center py-4 text-xs text-slate-400">No test papers registered yet.</div>
+                    )}
                   </div>
                 </div>
               </div>

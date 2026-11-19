@@ -615,7 +615,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
           {/* Right Column: Test Access Control Panel for Selected Student */}
           <div className={`${mobileView === 'roster' ? 'hidden lg:flex' : 'flex'} lg:col-span-7 flex-col space-y-4`}>
             {selectedStudent ? (
-              <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col">
                 {/* Mobile Back Button */}
                 <button
                   type="button"
@@ -772,65 +772,33 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                       return (
                         <div
                           key={t.id}
-                          className={`p-4 rounded-2xl border transition-all ${active
+                          className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${active
                             ? 'bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-900/60 shadow-xs'
                             : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800/60 opacity-85'
                             }`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 whitespace-nowrap shrink-0">
-                                  {t.category || 'General'}
+                          {/* Top Row: Category Pill & Active/Inactive Toggle */}
+                          <div className="flex items-center justify-between gap-2.5 mb-2 pb-2 border-b border-slate-100/80 dark:border-slate-800/80">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+                              <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 truncate max-w-full inline-block">
+                                {t.category || 'General'}
+                              </span>
+                              {!t.is_published && (
+                                <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 shrink-0">
+                                  Draft
                                 </span>
-                                {!t.is_published && (
-                                  <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 whitespace-nowrap shrink-0">
-                                    Draft
-                                  </span>
-                                )}
-                              </div>
-
-                              <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white leading-snug">
-                                {t.title}
-                              </h4>
-
-                              {t.description && (
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
-                                  {t.description}
-                                </p>
                               )}
-
-                              {/* Test metadata & Student progress */}
-                              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-2 text-[10px] text-slate-400">
-                                <span className="flex items-center gap-1 shrink-0">
-                                  <Clock className="w-3 h-3" />
-                                  {t.duration_minutes}m
-                                </span>
-                                <span className="flex items-center gap-1 shrink-0">
-                                  <Award className="w-3 h-3" />
-                                  {t.total_points} Pts
-                                </span>
-                                {t.question_count !== undefined && (
-                                  <span className="shrink-0">{t.question_count} Questions</span>
-                                )}
-
-                                {hasAttempts ? (
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 shrink-0">
-                                    <Check className="w-3 h-3" />
-                                    {userAttempts.length} {userAttempts.length === 1 ? 'attempt' : 'attempts'} (Best {bestScore}%)
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400 shrink-0">No attempts yet</span>
-                                )}
-                              </div>
                             </div>
 
                             {/* Active Toggle Switch */}
-                            <div className="flex flex-col items-end gap-1 shrink-0">
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="hidden sm:inline text-[10px] text-slate-400 whitespace-nowrap">
+                                {active ? 'Accessible to student' : 'Locked by default'}
+                              </span>
                               <button
                                 type="button"
                                 onClick={() => handleToggleTestAccess(selectedStudent.id, t.id)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold text-xs transition-all active:scale-95 shadow-xs whitespace-nowrap ${active
+                                className={`flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl font-semibold text-xs transition-all active:scale-95 shadow-xs whitespace-nowrap shrink-0 ${active
                                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
                                   : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200'
                                   }`}
@@ -848,9 +816,43 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                                   </>
                                 )}
                               </button>
-                              <span className="hidden sm:block text-[10px] text-slate-400 whitespace-nowrap">
-                                {active ? 'Accessible to student' : 'Locked by default'}
+                            </div>
+                          </div>
+
+                          {/* Card Body: Title, Description & Metadata */}
+                          <div>
+                            <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white leading-snug">
+                              {t.title}
+                            </h4>
+
+                            {t.description && (
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                                {t.description}
+                              </p>
+                            )}
+
+                            {/* Test metadata & Student progress */}
+                            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-2 text-[10px] text-slate-400">
+                              <span className="flex items-center gap-1 shrink-0">
+                                <Clock className="w-3 h-3" />
+                                {t.duration_minutes}m
                               </span>
+                              <span className="flex items-center gap-1 shrink-0">
+                                <Award className="w-3 h-3" />
+                                {t.total_points} Pts
+                              </span>
+                              {t.question_count !== undefined && (
+                                <span className="shrink-0">{t.question_count} Questions</span>
+                              )}
+
+                              {hasAttempts ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 shrink-0">
+                                  <Check className="w-3 h-3" />
+                                  {userAttempts.length} {userAttempts.length === 1 ? 'attempt' : 'attempts'} (Best {bestScore}%)
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 shrink-0">No attempts yet</span>
+                              )}
                             </div>
                           </div>
                         </div>
