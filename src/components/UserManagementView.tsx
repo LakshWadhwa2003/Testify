@@ -525,7 +525,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
             </div>
 
             {/* Students List */}
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+            <div className="space-y-2 lg:max-h-[600px] lg:overflow-y-auto pr-1">
               {filteredStudents.length === 0 ? (
                 <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 text-center border border-slate-200/80 dark:border-slate-800">
                   <p className="text-xs text-slate-400">No students found matching your search.</p>
@@ -627,65 +627,84 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                 </button>
 
                 {/* Student Info & Quick Actions Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white text-base font-bold shadow-md shadow-indigo-500/20 shrink-0">
-                      {selectedStudent.full_name?.charAt(0) || selectedStudent.email.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                          {selectedStudent.full_name || 'Selected Student'}
-                        </h3>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                          Student
-                        </span>
+                <div className="pb-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white text-base font-bold shadow-md shadow-indigo-500/20 shrink-0">
+                        {selectedStudent.full_name?.charAt(0) || selectedStudent.email.charAt(0).toUpperCase()}
                       </div>
-                      <p className="text-xs text-slate-400">{selectedStudent.email}</p>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                            {selectedStudent.full_name || 'Selected Student'}
+                          </h3>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 shrink-0">
+                            Student
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 truncate">{selectedStudent.email}</p>
+                      </div>
                     </div>
+
+                    {/* Student Removal Action */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStudent(selectedStudent.id, selectedStudent.full_name || selectedStudent.email)}
+                      disabled={deletingStudentId === selectedStudent.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:text-slate-400 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 hover:border-rose-200 dark:hover:border-rose-800 text-xs font-semibold transition-colors active:scale-95 touch-manipulation disabled:opacity-50 shrink-0 whitespace-nowrap"
+                      title="Remove student from roster"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>{deletingStudentId === selectedStudent.id ? 'Removing...' : 'Remove'}</span>
+                    </button>
                   </div>
 
-                  {/* Bulk Actions & Removal */}
+                  {/* Bulk Test Actions */}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleBulkUserAccess(selectedStudent.id, true)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition-colors active:scale-95 touch-manipulation"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition-colors active:scale-95 touch-manipulation whitespace-nowrap"
                       title="Activate all test papers for this student"
                     >
-                      <CheckCheck className="w-3.5 h-3.5" />
+                      <CheckCheck className="w-3.5 h-3.5 shrink-0" />
                       <span>Activate All</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleBulkUserAccess(selectedStudent.id, false)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-semibold hover:bg-rose-100 transition-colors active:scale-95 touch-manipulation"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-semibold hover:bg-rose-100 transition-colors active:scale-95 touch-manipulation whitespace-nowrap"
                       title="Deactivate all test papers for this student (Default state)"
                     >
-                      <Ban className="w-3.5 h-3.5" />
+                      <Ban className="w-3.5 h-3.5 shrink-0" />
                       <span>Deactivate All</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteStudent(selectedStudent.id, selectedStudent.full_name || selectedStudent.email)}
-                      disabled={deletingStudentId === selectedStudent.id}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:text-slate-400 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 hover:border-rose-200 dark:hover:border-rose-800 text-xs font-semibold transition-colors active:scale-95 touch-manipulation disabled:opacity-50"
-                      title="Remove student from roster"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>{deletingStudentId === selectedStudent.id ? 'Removing...' : 'Remove'}</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Default Notice Banner */}
-                <div className="mt-3 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between text-xs">
+                <div className="mt-3 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                   <span className="text-slate-600 dark:text-slate-300 text-[11px]">
                     Tests are <strong>deactivated by default</strong> for students. Toggle on the papers you wish this student to take.
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 shrink-0 ml-2">
-                    {tests.filter((t) => isTestActive(selectedStudent.id, t.id)).length} of {tests.length} Active
-                  </span>
+                  {(() => {
+                    const activeForStudent = tests.filter((t) => isTestActive(selectedStudent.id, t.id)).length;
+                    const isAll = activeForStudent === tests.length && tests.length > 0;
+                    const isNone = activeForStudent === 0;
+                    return (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-lg shrink-0 self-start sm:self-auto ${
+                          isAll
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                            : isNone
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
+                            : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300'
+                        }`}
+                      >
+                        {activeForStudent} of {tests.length} Active
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {/* Test Filters */}
@@ -701,12 +720,12 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                     />
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
                     {/* Category Filter */}
                     <select
                       value={testCategoryFilter}
                       onChange={(e) => setTestCategoryFilter(e.target.value)}
-                      className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-slate-700 dark:text-slate-300 focus:outline-hidden"
+                      className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-slate-700 dark:text-slate-300 focus:outline-hidden w-full sm:w-auto"
                     >
                       {categories.map((c) => (
                         <option key={c} value={c}>
@@ -719,7 +738,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                     <select
                       value={testStatusFilter}
                       onChange={(e) => setTestStatusFilter(e.target.value as any)}
-                      className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-slate-700 dark:text-slate-300 focus:outline-hidden"
+                      className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-slate-700 dark:text-slate-300 focus:outline-hidden w-full sm:w-auto"
                     >
                       <option value="all">All Status</option>
                       <option value="active">Active Only</option>
@@ -729,7 +748,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                 </div>
 
                 {/* Tests List with Active Toggles */}
-                <div className="space-y-3 mt-1 max-h-[500px] overflow-y-auto pr-1">
+                <div className="space-y-3 mt-1 lg:max-h-[580px] lg:overflow-y-auto pr-1">
                   {filteredTestsForUser.length === 0 ? (
                     <div className="py-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
                       <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-2" />
@@ -760,12 +779,12 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 whitespace-nowrap shrink-0">
                                   {t.category || 'General'}
                                 </span>
                                 {!t.is_published && (
-                                  <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
+                                  <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 whitespace-nowrap shrink-0">
                                     Draft
                                   </span>
                                 )}
@@ -782,25 +801,26 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                               )}
 
                               {/* Test metadata & Student progress */}
-                              <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-slate-400">
-                                <span className="flex items-center gap-1">
+                              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-2 text-[10px] text-slate-400">
+                                <span className="flex items-center gap-1 shrink-0">
                                   <Clock className="w-3 h-3" />
                                   {t.duration_minutes}m
                                 </span>
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-1 shrink-0">
                                   <Award className="w-3 h-3" />
                                   {t.total_points} Pts
                                 </span>
                                 {t.question_count !== undefined && (
-                                  <span>{t.question_count} Questions</span>
+                                  <span className="shrink-0">{t.question_count} Questions</span>
                                 )}
 
                                 {hasAttempts ? (
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 shrink-0">
                                     <Check className="w-3 h-3" />
-                                    {userAttempts.length} attempts (Best {bestScore}%</span>
+                                    {userAttempts.length} {userAttempts.length === 1 ? 'attempt' : 'attempts'} (Best {bestScore}%)
+                                  </span>
                                 ) : (
-                                  <span className="text-slate-400">No attempts yet</span>
+                                  <span className="text-slate-400 shrink-0">No attempts yet</span>
                                 )}
                               </div>
                             </div>
@@ -810,7 +830,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                               <button
                                 type="button"
                                 onClick={() => handleToggleTestAccess(selectedStudent.id, t.id)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl font-semibold text-xs transition-all active:scale-95 shadow-xs ${active
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold text-xs transition-all active:scale-95 shadow-xs whitespace-nowrap ${active
                                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
                                   : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200'
                                   }`}
@@ -818,17 +838,17 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                               >
                                 {active ? (
                                   <>
-                                    <Unlock className="w-3.5 h-3.5" />
+                                    <Unlock className="w-3.5 h-3.5 shrink-0" />
                                     <span>Active</span>
                                   </>
                                 ) : (
                                   <>
-                                    <Lock className="w-3.5 h-3.5" />
+                                    <Lock className="w-3.5 h-3.5 shrink-0" />
                                     <span>Inactive</span>
                                   </>
                                 )}
                               </button>
-                              <span className="text-[10px] text-slate-400">
+                              <span className="hidden sm:block text-[10px] text-slate-400 whitespace-nowrap">
                                 {active ? 'Accessible to student' : 'Locked by default'}
                               </span>
                             </div>
@@ -872,7 +892,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
               </div>
             </div>
 
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+            <div className="space-y-2 lg:max-h-[600px] lg:overflow-y-auto pr-1">
               {tests
                 .filter(
                   (t) =>
@@ -932,8 +952,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                 </button>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
-                  <div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 whitespace-nowrap">
                       {selectedTest.category || 'General'}
                     </span>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1">
@@ -945,28 +965,28 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleBulkTestAccess(selectedTest.id, true)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition-colors active:scale-95 touch-manipulation"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition-colors active:scale-95 touch-manipulation whitespace-nowrap"
                     >
-                      <CheckCheck className="w-3.5 h-3.5" />
+                      <CheckCheck className="w-3.5 h-3.5 shrink-0" />
                       <span>Activate All</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleBulkTestAccess(selectedTest.id, false)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-semibold hover:bg-rose-100 transition-colors active:scale-95 touch-manipulation"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-semibold hover:bg-rose-100 transition-colors active:scale-95 touch-manipulation whitespace-nowrap"
                     >
-                      <Ban className="w-3.5 h-3.5" />
+                      <Ban className="w-3.5 h-3.5 shrink-0" />
                       <span>Deactivate All</span>
                     </button>
                   </div>
                 </div>
 
                 {/* List of students with access toggle (Only students, no admins) */}
-                <div className="space-y-2.5 mt-4 max-h-[500px] overflow-y-auto pr-1">
+                <div className="space-y-2.5 mt-4 lg:max-h-[500px] lg:overflow-y-auto pr-1">
                   {students.map((student) => {
                     const active = isTestActive(student.id, selectedTest.id);
                     const key = `${student.id}_${selectedTest.id}`;
@@ -994,7 +1014,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                             </span>
                             {hasAttempts && (
                               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                                {studentAttempts.length} attempts • Best {bestScore}%
+                                {studentAttempts.length} {studentAttempts.length === 1 ? 'attempt' : 'attempts'} • Best {bestScore}%
                               </span>
                             )}
                           </div>
@@ -1004,7 +1024,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                           <button
                             type="button"
                             onClick={() => handleToggleTestAccess(student.id, selectedTest.id)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold text-xs transition-all active:scale-95 shadow-xs ${active
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold text-xs transition-all active:scale-95 shadow-xs whitespace-nowrap ${active
                               ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                               : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200'
                               }`}

@@ -233,17 +233,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                       key={item.id}
                       type="button"
                       onClick={() => handleNavClick(item.id)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer text-left ${
-                        isActive
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer text-left ${isActive
                           ? 'text-white shadow-md'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
-                      }`}
+                        }`}
                       style={
                         isActive
                           ? {
-                              backgroundColor: '#0C115B',
-                              boxShadow: '0 8px 20px rgba(12, 17, 91, 0.25)',
-                            }
+                            backgroundColor: '#0C115B',
+                            boxShadow: '0 8px 20px rgba(12, 17, 91, 0.25)',
+                          }
                           : undefined
                       }
                     >
@@ -251,11 +250,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                       <span className="text-xs font-semibold">{item.label}</span>
                       {item.count !== undefined && item.count > 0 && (
                         <span
-                          className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            isActive
+                          className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive
                               ? 'bg-white/20 text-white'
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700'
-                          }`}
+                            }`}
                         >
                           {item.count}
                         </span>
@@ -274,11 +272,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                 <button
                   type="button"
                   onClick={() => handleNavClick('profile')}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left cursor-pointer ${
-                    activeNav === 'profile'
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left cursor-pointer ${activeNav === 'profile'
                       ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+                    }`}
                 >
                   <Settings className="w-4 h-4 shrink-0" />
                   <span className="text-xs font-semibold">Admin Settings</span>
@@ -335,11 +332,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                         key={item.id}
                         type="button"
                         onClick={() => handleNavClick(item.id)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                          isActive
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${isActive
                             ? 'text-white'
                             : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        }`}
+                          }`}
                         style={isActive ? { backgroundColor: '#0C115B' } : undefined}
                       >
                         <Icon className="w-4 h-4" />
@@ -728,11 +724,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                           </div>
                           <div className="text-right">
                             <span
-                              className={`inline-block text-xs px-2.5 py-1 rounded-full font-bold ${
-                                isPassing
+                              className={`inline-block text-xs px-2.5 py-1 rounded-full font-bold ${isPassing
                                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                                   : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
-                              }`}
+                                }`}
                             >
                               {sub.percentage}% Score
                             </span>
