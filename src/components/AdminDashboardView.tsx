@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { TestPaper, Submission, Profile, UserTestAccess } from '../types/database';
 import { testsService, submissionsService, usersService, userTestAccessService, isDemoStudentOrAccount } from '../services/api';
@@ -9,6 +9,7 @@ import { AdminUploadPaper } from './AdminUploadPaper';
 import { EditTestView } from './EditTestView';
 import { ProfileView } from './ProfileView';
 import { TestReportView } from './TestReportView';
+import { ThemeToggle } from './ThemeToggle';
 import {
   LayoutDashboard,
   BookOpen,
@@ -16,7 +17,6 @@ import {
   Users,
   Plus,
   Search,
-  Bell,
   Clock,
   ArrowUpRight,
   CheckCircle2,
@@ -54,6 +54,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
   const [activeNav, setActiveNav] = useState<AdminNavTab>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchFilterTab, setSearchFilterTab] = useState<'all' | 'papers' | 'students' | 'marks'>('all');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Active subviews
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
@@ -144,6 +148,108 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
     setActiveNav(tab);
     setMobileMenuOpen(false);
   };
+
+  // Keyboard shortcut for search (⌘F / Ctrl+F or ⌘K / Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === 'k')) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        setIsSearchOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+        searchInputRef.current?.blur();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Multi-entity search results calculation
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      return {
+        tests: [],
+        students: [],
+        submissions: [],
+        totalCount: 0,
+      };
+    }
+
+    const matchedTests = tests.filter((t) => {
+      return (
+        t.title.toLowerCase().includes(q) ||
+        (t.description && t.description.toLowerCase().includes(q)) ||
+        (t.category && t.category.toLowerCase().includes(q))
+      );
+    });
+
+    const matchedStudents = students.filter((s) => {
+      return (
+        (s.full_name && s.full_name.toLowerCase().includes(q)) ||
+        s.email.toLowerCase().includes(q)
+      );
+    });
+
+    const matchedSubmissions = submissions.filter((s) => {
+      const testObj = tests.find((t) => t.id === s.test_id);
+      return (
+        (s.user_name && s.user_name.toLowerCase().includes(q)) ||
+        (s.user_email && s.user_email.toLowerCase().includes(q)) ||
+        (s.test_title && s.test_title.toLowerCase().includes(q)) ||
+        (testObj?.title && testObj.title.toLowerCase().includes(q)) ||
+        `${s.percentage}%`.includes(q) ||
+        `attempt ${s.attempt_number}`.includes(q)
+      );
+    });
+
+    return {
+      tests: matchedTests,
+      students: matchedStudents,
+      submissions: matchedSubmissions,
+      totalCount: matchedTests.length + matchedStudents.length + matchedSubmissions.length,
+    };
+  }, [searchQuery, tests, students, submissions]);
+
+  // Overview tab filtered items
+  const overviewTests = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return tests.slice(0, 5);
+    return tests.filter((t) =>
+      t.title.toLowerCase().includes(q) ||
+      (t.description && t.description.toLowerCase().includes(q)) ||
+      (t.category && t.category.toLowerCase().includes(q))
+    );
+  }, [tests, searchQuery]);
+
+  const overviewSubmissions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return submissions.slice(0, 4);
+    return submissions.filter((s) => {
+      const testObj = tests.find((t) => t.id === s.test_id);
+      return (
+        (s.user_name && s.user_name.toLowerCase().includes(q)) ||
+        (s.user_email && s.user_email.toLowerCase().includes(q)) ||
+        (s.test_title && s.test_title.toLowerCase().includes(q)) ||
+        (testObj?.title && testObj.title.toLowerCase().includes(q)) ||
+        `${s.percentage}%`.includes(q)
+      );
+    });
+  }, [submissions, tests, searchQuery]);
 
   // Subject icon badges generator
   const getCategoryBadge = (index: number) => {
@@ -245,6 +351,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
 
             <div>
               <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider px-2">
+                Appearance
+              </p>
+              <div className="px-2 mb-3">
+                <ThemeToggle variant="pill" className="w-full justify-between" />
+              </div>
+
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider px-2">
                 General
               </p>
               <nav className="space-y-1">
@@ -329,9 +442,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
               </div>
             </div>
 
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Appearance</span>
+              <ThemeToggle variant="pill" />
+            </div>
+
             <button
               onClick={() => logout()}
-              className="w-full mt-6 py-2.5 px-3 rounded-xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 font-semibold text-xs flex items-center justify-center gap-2"
+              className="w-full mt-4 py-2.5 px-3 rounded-xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 font-semibold text-xs flex items-center justify-center gap-2"
             >
               <LogOut className="w-4 h-4" />
               <span>Sign Out</span>
@@ -358,33 +476,323 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                 <Menu className="w-5 h-5" />
               </button>
 
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div ref={searchContainerRef} className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
+                  ref={searchInputRef}
                   type="text"
                   placeholder="Search papers, student names, marks..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchOpen(true)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setIsSearchOpen(true);
+                  }}
                   className="w-full pl-9 pr-14 py-2 text-xs md:text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all shadow-xs"
                 />
-                <kbd className="hidden md:inline-block absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
-                  ⌘F
-                </kbd>
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      searchInputRef.current?.focus();
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <kbd
+                    onClick={() => {
+                      searchInputRef.current?.focus();
+                      setIsSearchOpen(true);
+                    }}
+                    className="hidden md:inline-block absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 cursor-pointer select-none"
+                  >
+                    ⌘F
+                  </kbd>
+                )}
+
+                {/* Instant Search Results Dropdown */}
+                {isSearchOpen && searchQuery.trim() && (
+                  <div className="absolute left-0 right-0 sm:-right-24 top-full mt-2 z-50 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[75vh] flex flex-col backdrop-blur-xl">
+                    {/* Filter Tabs Header */}
+                    <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 flex items-center justify-between gap-1 text-xs">
+                      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+                        <button
+                          type="button"
+                          onClick={() => setSearchFilterTab('all')}
+                          className={`px-2.5 py-1 rounded-lg font-semibold text-[11px] transition-all cursor-pointer ${
+                            searchFilterTab === 'all'
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                          }`}
+                        >
+                          All ({searchResults.totalCount})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSearchFilterTab('papers')}
+                          className={`px-2.5 py-1 rounded-lg font-semibold text-[11px] transition-all cursor-pointer ${
+                            searchFilterTab === 'papers'
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                          }`}
+                        >
+                          Papers ({searchResults.tests.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSearchFilterTab('students')}
+                          className={`px-2.5 py-1 rounded-lg font-semibold text-[11px] transition-all cursor-pointer ${
+                            searchFilterTab === 'students'
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                          }`}
+                        >
+                          Students ({searchResults.students.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSearchFilterTab('marks')}
+                          className={`px-2.5 py-1 rounded-lg font-semibold text-[11px] transition-all cursor-pointer ${
+                            searchFilterTab === 'marks'
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                          }`}
+                        >
+                          Marks ({searchResults.submissions.length})
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsSearchOpen(false)}
+                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        title="Close results"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Results Body */}
+                    <div className="overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 max-h-[60vh]">
+                      {searchResults.totalCount === 0 ? (
+                        <div className="p-8 text-center">
+                          <Search className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            No matches found for &quot;{searchQuery}&quot;
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            Try searching with a paper title, subject topic, student name, or email.
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Test Papers List */}
+                          {(searchFilterTab === 'all' || searchFilterTab === 'papers') && searchResults.tests.length > 0 && (
+                            <div className="p-2">
+                              <div className="flex items-center justify-between px-2 py-1 mb-1">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                  <BookOpen className="w-3 h-3 text-indigo-500" />
+                                  Test Papers ({searchResults.tests.length})
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsSearchOpen(false);
+                                    handleNavClick('tests');
+                                  }}
+                                  className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                                >
+                                  View all in Papers
+                                </button>
+                              </div>
+                              <div className="space-y-1">
+                                {searchResults.tests.map((test) => (
+                                  <div
+                                    key={test.id}
+                                    onClick={() => {
+                                      setIsSearchOpen(false);
+                                      setEditingTestId(test.id);
+                                    }}
+                                    className="p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                        {test.title}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
+                                        <span className="px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium">
+                                          {test.category || 'General'}
+                                        </span>
+                                        <span>{test.duration_minutes} mins</span>
+                                        <span>&bull;</span>
+                                        <span>{test.total_points} pts</span>
+                                        {test.is_published ? (
+                                          <span className="text-emerald-600 font-medium">Published</span>
+                                        ) : (
+                                          <span className="text-slate-400 font-medium">Draft</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setIsSearchOpen(false);
+                                          onStartTestPreview?.(test.id);
+                                        }}
+                                        className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+                                      >
+                                        Preview
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setIsSearchOpen(false);
+                                          setEditingTestId(test.id);
+                                        }}
+                                        className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition-colors"
+                                      >
+                                        Edit
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Students List */}
+                          {(searchFilterTab === 'all' || searchFilterTab === 'students') && searchResults.students.length > 0 && (
+                            <div className="p-2">
+                              <div className="flex items-center justify-between px-2 py-1 mb-1">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Users className="w-3 h-3 text-amber-500" />
+                                  Students ({searchResults.students.length})
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsSearchOpen(false);
+                                    handleNavClick('students');
+                                  }}
+                                  className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                                >
+                                  Open Roster
+                                </button>
+                              </div>
+                              <div className="space-y-1">
+                                {searchResults.students.map((student) => (
+                                  <div
+                                    key={student.id}
+                                    onClick={() => {
+                                      setIsSearchOpen(false);
+                                      handleNavClick('students');
+                                    }}
+                                    className="p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                        {student.full_name?.charAt(0) || student.email?.charAt(0).toUpperCase() || 'S'}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-semibold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                          {student.full_name || 'Student Candidate'}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 truncate">
+                                          {student.email}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md shrink-0">
+                                      Manage Access
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Submissions & Marks List */}
+                          {(searchFilterTab === 'all' || searchFilterTab === 'marks') && searchResults.submissions.length > 0 && (
+                            <div className="p-2">
+                              <div className="flex items-center justify-between px-2 py-1 mb-1">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Award className="w-3 h-3 text-emerald-500" />
+                                  Submissions & Marks ({searchResults.submissions.length})
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsSearchOpen(false);
+                                    handleNavClick('marks');
+                                  }}
+                                  className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                                >
+                                  View all in Marks
+                                </button>
+                              </div>
+                              <div className="space-y-1">
+                                {searchResults.submissions.map((sub) => {
+                                  const testObj = tests.find((t) => t.id === sub.test_id);
+                                  const isPass = (sub.percentage || 0) >= 50;
+                                  return (
+                                    <div
+                                      key={sub.id}
+                                      onClick={() => {
+                                        setIsSearchOpen(false);
+                                        setActiveReportSubmissionId(sub.id);
+                                      }}
+                                      className="p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-semibold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                          {sub.user_name || sub.user_email || 'Student Candidate'}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 truncate">
+                                          {sub.test_title || testObj?.title || 'Assessment'} &bull; Attempt #{sub.attempt_number || 1}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <span
+                                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                            isPass
+                                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                              : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                          }`}
+                                        >
+                                          {sub.percentage}%
+                                        </span>
+                                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {/* Footer Tip */}
+                    <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 text-[10px] text-slate-400 flex items-center justify-between">
+                      <span>Tip: Press <kbd className="px-1 py-0.2 bg-slate-200 dark:bg-slate-700 rounded text-slate-600 dark:text-slate-300">ESC</kbd> to close</span>
+                      <span>{searchResults.totalCount} total results</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Top Right Actions & User Profile Badge */}
             <div className="flex items-center gap-2 md:gap-3">
-              {/* Notification Pill */}
-              <button
-                type="button"
-                onClick={() => alert(`Total active submissions: ${submissions.length}`)}
-                className="size-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all relative cursor-pointer"
-                title="Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-              </button>
+              {/* Theme Mode Toggle */}
+              <ThemeToggle />
 
               {/* User Avatar & Info */}
               <div
@@ -456,6 +864,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
         ) : activeNav === 'tests' ? (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
             <TestsCatalogView
+              initialSearch={searchQuery}
               onStartTest={(testId) => onStartTestPreview?.(testId)}
               onEditTest={(testId) => setEditingTestId(testId)}
               onCreateTest={() => handleNavClick('create')}
@@ -469,6 +878,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
         ) : activeNav === 'marks' ? (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
             <MarksView
+              initialSearch={searchQuery}
               onSelectSubmission={(subId) => setActiveReportSubmissionId(subId)}
               onRetakeTest={(testId) => onStartTestPreview?.(testId)}
               onNavigateToTests={() => setActiveNav('tests')}
@@ -476,7 +886,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
           </div>
         ) : activeNav === 'students' ? (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <UserManagementView initialTestId={manageUsersTestId} />
+            <UserManagementView initialTestId={manageUsersTestId} initialSearch={searchQuery} />
           </div>
         ) : activeNav === 'create' ? (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -647,9 +1057,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h2 className="text-base md:text-lg font-bold text-slate-900 dark:text-white">
-                        Student Submissions & Activity
+                        {searchQuery ? `Student Submissions (${overviewSubmissions.length})` : 'Student Submissions & Activity'}
                       </h2>
-                      <p className="text-xs text-slate-400">Latest candidate test completions and evaluation state</p>
+                      <p className="text-xs text-slate-400">
+                        {searchQuery ? `Matching "${searchQuery}"` : 'Latest candidate test completions and evaluation state'}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -662,7 +1074,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                   </div>
 
                   <div className="space-y-2.5">
-                    {submissions.slice(0, 4).map((sub, idx) => {
+                    {overviewSubmissions.map((sub, idx) => {
                       const testObj = tests.find((t) => t.id === sub.test_id);
                       const isPassing = (sub.percentage || 0) >= 50;
                       return (
@@ -696,9 +1108,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                       );
                     })}
 
-                    {submissions.length === 0 && (
+                    {overviewSubmissions.length === 0 && (
                       <div className="text-center py-6 text-xs text-slate-400">
-                        No submissions recorded yet. Students can take tests from the catalog.
+                        {searchQuery ? `No submissions matched "${searchQuery}".` : 'No submissions recorded yet. Students can take tests from the catalog.'}
                       </div>
                     )}
                   </div>
@@ -743,8 +1155,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm transition-all hover:shadow-lg">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h2 className="text-base font-bold text-slate-900 dark:text-white">Available Papers</h2>
-                      <p className="text-[11px] text-slate-400">Registered examination tests</p>
+                      <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                        {searchQuery ? `Matching Papers (${overviewTests.length})` : 'Available Papers'}
+                      </h2>
+                      <p className="text-[11px] text-slate-400">
+                        {searchQuery ? `Filtered by "${searchQuery}"` : 'Registered examination tests'}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -757,7 +1173,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                   </div>
 
                   <div className="space-y-2.5">
-                    {tests.slice(0, 5).map((test, idx) => {
+                    {overviewTests.map((test, idx) => {
                       const badge = getCategoryBadge(idx);
                       return (
                         <div
@@ -781,8 +1197,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onStartT
                         </div>
                       );
                     })}
-                    {tests.length === 0 && (
-                      <div className="text-center py-4 text-xs text-slate-400">No test papers registered yet.</div>
+                    {overviewTests.length === 0 && (
+                      <div className="text-center py-4 text-xs text-slate-400">
+                        {searchQuery ? `No test papers matched "${searchQuery}".` : 'No test papers registered yet.'}
+                      </div>
                     )}
                   </div>
                 </div>

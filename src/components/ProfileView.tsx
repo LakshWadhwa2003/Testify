@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Smartphone, CheckCircle, Database, Shield, GraduationCap } from 'lucide-react';
+import { LogOut, Smartphone, CheckCircle, Database, Shield, GraduationCap, Sun, Moon } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 export const ProfileView: React.FC = () => {
   const { user, isAdmin, logout, isConfigured } = useAuth();
@@ -23,6 +24,26 @@ export const ProfileView: React.FC = () => {
           {isAdmin ? <Shield className="w-3.5 h-3.5" /> : <GraduationCap className="w-3.5 h-3.5" />}
           <span>{isAdmin ? 'Admin (Teacher)' : 'Student'}</span>
         </span>
+      </div>
+
+      {/* Appearance & Theme Setting */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm mb-4">
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+          Appearance & Theme
+        </h3>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <Sun className="w-4 h-4 dark:hidden text-amber-500" />
+              <Moon className="w-4 h-4 hidden dark:block text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-900 dark:text-white">Interface Theme</p>
+              <p className="text-[11px] text-slate-400">Choose light or dark mode</p>
+            </div>
+          </div>
+          <ThemeToggle variant="pill" />
+        </div>
       </div>
 
       {/* Account Details iOS Grouped Card */}

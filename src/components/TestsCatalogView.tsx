@@ -16,10 +16,12 @@ import {
   FileText,
   Lock,
   Users,
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
 
 interface TestsCatalogViewProps {
+  initialSearch?: string;
   onStartTest: (testId: string) => void;
   onEditTest?: (testId: string) => void;
   onViewReports?: (testId?: string) => void;
@@ -28,6 +30,7 @@ interface TestsCatalogViewProps {
 }
 
 export const TestsCatalogView: React.FC<TestsCatalogViewProps> = ({
+  initialSearch,
   onStartTest,
   onEditTest,
   onViewReports,
@@ -39,7 +42,13 @@ export const TestsCatalogView: React.FC<TestsCatalogViewProps> = ({
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [userAccessMap, setUserAccessMap] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [prevInitialSearch, setPrevInitialSearch] = useState(initialSearch);
+  const [searchTerm, setSearchTerm] = useState(initialSearch || '');
+
+  if (initialSearch !== prevInitialSearch) {
+    setPrevInitialSearch(initialSearch);
+    setSearchTerm(initialSearch || '');
+  }
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'locked'>('all');
 
@@ -122,8 +131,12 @@ export const TestsCatalogView: React.FC<TestsCatalogViewProps> = ({
   }, [tests, userAccessMap, isAdmin]);
 
   const filteredTests = tests.filter((t) => {
-    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (t.description && t.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const term = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !term ||
+      t.title.toLowerCase().includes(term) ||
+      (t.description && t.description.toLowerCase().includes(term)) ||
+      (t.category && t.category.toLowerCase().includes(term));
     const matchesCat = selectedCategory === 'All' || t.category === selectedCategory;
     const isTestActive = isAdmin || userAccessMap[t.id] === true;
     const matchesStatus =
@@ -170,8 +183,18 @@ export const TestsCatalogView: React.FC<TestsCatalogViewProps> = ({
             placeholder="Search assessments by title or topic..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+            className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Categories & Student Access Status Filter */}

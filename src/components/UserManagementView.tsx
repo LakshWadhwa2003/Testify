@@ -24,9 +24,10 @@ import {
 
 interface UserManagementViewProps {
   initialTestId?: string | null;
+  initialSearch?: string;
 }
 
-export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialTestId }) => {
+export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialTestId, initialSearch }) => {
   // Data state
   const [users, setUsers] = useState<Profile[]>([]);
   const [tests, setTests] = useState<TestPaper[]>([]);
@@ -41,8 +42,14 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
   const [selectedTestId, setSelectedTestId] = useState<string | null>(initialTestId || null);
 
   // Filters & Search (admins are off the list, searching students only)
-  const [userSearch, setUserSearch] = useState('');
+  const [prevInitialSearch, setPrevInitialSearch] = useState(initialSearch);
+  const [userSearch, setUserSearch] = useState(initialSearch || '');
   const [testSearch, setTestSearch] = useState('');
+
+  if (initialSearch !== prevInitialSearch) {
+    setPrevInitialSearch(initialSearch);
+    setUserSearch(initialSearch || '');
+  }
   const [testCategoryFilter, setTestCategoryFilter] = useState('All');
   const [testStatusFilter, setTestStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
@@ -519,8 +526,18 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                   placeholder="Search students by name or email..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-base sm:text-xs rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
+                  className="w-full pl-9 pr-8 py-2 text-base sm:text-xs rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
                 />
+                {userSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setUserSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    aria-label="Clear student search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -716,8 +733,18 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ initialT
                       placeholder="Filter test papers..."
                       value={testSearch}
                       onChange={(e) => setTestSearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-white"
+                      className="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-white"
                     />
+                    {testSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setTestSearch('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        aria-label="Clear test filter"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">

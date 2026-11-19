@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, ShieldCheck, User, Sparkles } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 export const Navbar: React.FC = () => {
   const { user, isAdmin, logout } = useAuth();
@@ -68,6 +69,8 @@ export const Navbar: React.FC = () => {
               </div>
             </div>
           )}
+
+          <ThemeToggle />
 
           <button
             onClick={() => logout()}

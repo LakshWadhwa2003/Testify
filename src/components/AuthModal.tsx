@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/database';
 import { Lock, Mail, User, Shield, GraduationCap, ArrowRight, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 interface AuthModalProps {
   onClose?: () => void;
@@ -80,6 +81,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     >
       {/* Subtle tint overlay */}
       <div className="absolute inset-0 bg-black/15 pointer-events-none" />
+
+      {/* Top right theme toggle */}
+      <div className="absolute top-4 right-4 z-30">
+        <ThemeToggle className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-md border-white/40 dark:border-slate-700/60 shadow-md text-slate-800 dark:text-slate-100 hover:bg-white/60 dark:hover:bg-slate-800/80" />
+      </div>
 
       {/* Floating liquid glass orbs for visual depth */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">

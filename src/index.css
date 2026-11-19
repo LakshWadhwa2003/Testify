@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --sat: env(safe-area-inset-top, 0px);
@@ -21,6 +23,20 @@
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
     overflow-x: hidden;
+  }
+
+  html.dark,
+  body.dark {
+    background-color: #020617;
+    color: #f8fafc;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html:not(.dark) {
+    color-scheme: light;
   }
 
   /* Prevent iOS zoom on input focus when font size is under 16px */

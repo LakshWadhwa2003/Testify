@@ -13,10 +13,12 @@ import {
   RotateCcw,
   History,
   BarChart3,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 
 interface MarksViewProps {
+  initialSearch?: string;
   onSelectSubmission?: (submissionId: string) => void;
   onRetakeTest?: (testId: string) => void;
   onNavigateToTests?: () => void;
@@ -25,6 +27,7 @@ interface MarksViewProps {
 type FilterMode = 'all' | 'latest' | 'retakes';
 
 export const MarksView: React.FC<MarksViewProps> = ({
+  initialSearch,
   onSelectSubmission,
   onRetakeTest,
   onNavigateToTests,
@@ -32,7 +35,13 @@ export const MarksView: React.FC<MarksViewProps> = ({
   const { user, isAdmin } = useAuth();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [prevInitialSearch, setPrevInitialSearch] = useState(initialSearch);
+  const [searchTerm, setSearchTerm] = useState(initialSearch || '');
+
+  if (initialSearch !== prevInitialSearch) {
+    setPrevInitialSearch(initialSearch);
+    setSearchTerm(initialSearch || '');
+  }
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [selectedStudentEmail, setSelectedStudentEmail] = useState<string>('all');
@@ -147,13 +156,15 @@ export const MarksView: React.FC<MarksViewProps> = ({
   // Filtered submissions
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((s) => {
-      const term = searchTerm.toLowerCase();
-      const testMatch = s.test_title?.toLowerCase().includes(term);
-      const userMatch = s.user_name?.toLowerCase().includes(term) || s.user_email?.toLowerCase().includes(term);
-      const attemptMatch = `attempt ${s.attempt_number}`.includes(term) || `#${s.attempt_number}`.includes(term);
-      const matchesSearch = testMatch || userMatch || attemptMatch;
-
-      if (!matchesSearch) return false;
+      const term = searchTerm.trim().toLowerCase();
+      if (term) {
+        const testMatch = (s.test_title || '').toLowerCase().includes(term);
+        const userMatch = (s.user_name || '').toLowerCase().includes(term) || (s.user_email || '').toLowerCase().includes(term);
+        const attemptMatch = `attempt ${s.attempt_number}`.includes(term) || `#${s.attempt_number}`.includes(term);
+        const scoreMatch = `${s.percentage}%`.includes(term) || `${s.score}`.includes(term);
+        const matchesSearch = testMatch || userMatch || attemptMatch || scoreMatch;
+        if (!matchesSearch) return false;
+      }
 
       // Admin student filter
       if (isAdmin && selectedStudentEmail !== 'all' && s.user_email !== selectedStudentEmail) {
@@ -264,8 +275,18 @@ export const MarksView: React.FC<MarksViewProps> = ({
             placeholder={isAdmin ? "Search by student name, test title, or attempt..." : "Search past attempts or tests..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+            className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Filter Pills & Dropdowns */}

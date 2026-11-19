@@ -17,9 +17,22 @@
   <link rel="manifest" href="/manifest.webmanifest" />
 
   <title>Testify - Tests & Assessments</title>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('theme');
+        var supportDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (theme === 'dark' || (!theme && supportDark)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
-<body class="bg-slate-50 text-slate-900 selection:bg-indigo-500 selection:text-white">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-indigo-500 selection:text-white">
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
   <script>
