@@ -62,6 +62,30 @@ export const INITIAL_TESTS: TestPaper[] = [
     created_by: 'admin-user-01',
     created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
     question_count: 42,
+  },
+  {
+    id: '66666666-6666-4666-8666-666666666666',
+    title: "LNAT Paper 6: Cognitive Psychology, Eyewitness Memory & Judicial Proof",
+    description: "Adapted from official LNAT Practice Test 2 (Passage 3: On Memory by Michel de Montaigne) and legal epistemology. Explores the fallibility of human memory, eyewitness identification reliability, presumption of innocence, cognitive bias in forensic testimony, and standards of proof in common-law criminal jurisprudence.",
+    duration_minutes: 95,
+    total_points: 42,
+    is_published: true,
+    category: "LNAT - Critical Reasoning",
+    created_by: 'admin-user-01',
+    created_at: new Date(Date.now() - 6 * 86400000).toISOString(),
+    question_count: 42,
+  },
+  {
+    id: '77777777-7777-4777-8777-777777777777',
+    title: "LNAT Paper 7: Automation, The Future of Work & Socio-Economic Rights",
+    description: "Derived from official LNAT Practice Test 2 (Passage 6: 'The Future of Work') and Practice Test 1 ('A Global Dilemma'). Investigates technological unemployment, gig-economy employment status, collective bargaining, universal basic income, algorithmic management, and socio-economic rights in modern jurisprudence.",
+    duration_minutes: 95,
+    total_points: 42,
+    is_published: true,
+    category: "LNAT - Critical Reasoning",
+    created_by: 'admin-user-01',
+    created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
+    question_count: 42,
   }
 ];
 

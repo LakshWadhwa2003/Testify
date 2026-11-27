@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/database';
-import { Lock, Mail, User, Shield, GraduationCap, ArrowRight, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
+import { Lock, Mail, User, Shield, GraduationCap, ArrowRight, CheckCircle2, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 interface AuthModalProps {
@@ -13,6 +13,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<UserRole>('student');
   const [error, setError] = useState<string | null>(null);
@@ -188,6 +189,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               setIsRegister(false);
               setError(null);
               setInfoNotice(null);
+              setShowPassword(false);
             }}
             className={`py-2.5 text-xs font-bold rounded-xl transition-all duration-200 touch-manipulation active:scale-95 ${!isRegister
                 ? 'bg-white/90 text-slate-900 shadow-md backdrop-blur-md border border-white/60'
@@ -202,6 +204,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               setIsRegister(true);
               setError(null);
               setInfoNotice(null);
+              setShowPassword(false);
             }}
             className={`py-2.5 text-xs font-bold rounded-xl transition-all duration-200 touch-manipulation active:scale-95 ${isRegister
                 ? 'bg-white/90 text-slate-900 shadow-md backdrop-blur-md border border-white/60'
@@ -293,13 +296,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-600 absolute left-3.5 top-3.5 pointer-events-none" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-3.5 py-3 rounded-xl liquid-glass-input text-slate-900 placeholder:text-slate-600/70 text-sm font-medium focus:outline-none transition-all duration-200"
+                className="w-full pl-10 pr-10 py-3 rounded-xl liquid-glass-input text-slate-900 placeholder:text-slate-600/70 text-sm font-medium focus:outline-none transition-all duration-200"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-3.5 text-slate-600 hover:text-slate-900 focus:outline-none cursor-pointer transition-colors p-0.5 rounded touch-manipulation"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
           </div>
 
